@@ -50,45 +50,47 @@ def _ncx2_pdf(x, nc):  # df=2
     return jnp.exp(_ncx2_log_pdf(x, nc))
 
 
-def pmds(dists, n_samples=100, random_state=42, lr=1e-2, epochs=5):
+def pmds(dists, n_samples=100, random_state=42, lr=1e-1, epochs=10):
     n_components = 2
 
     key_m, key_s = random.split(random.PRNGKey(random_state))
     mu = random.normal(key_m, (n_samples, n_components))
-    sigma_square = jax.nn.softplus(1e-4 * np.ones(n_samples))
+    sigma_square = jax.nn.softplus(1e-5 * np.ones(n_samples))
 
     all_pairs = list(combinations(range(n_samples), 2))
+    idx0, idx1 = list(zip(*all_pairs))
+    assert len(dists) == len(idx0)
 
-    # loss function for each pair
-    def loss_one_pair(params, d):
+    # # loss function for each pair
+    # def loss_one_pair(params, d):
+    #     mu_i, mu_j, s_i, s_j = params
+    #     nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
+    #     return _ncx2_log_pdf(x=d, nc=nc)
+
+    def loss_all_pairs(params, dists):
         mu_i, mu_j, s_i, s_j = params
-        nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
-        return _ncx2_log_pdf(x=d, nc=nc)
+        nc = jnp.linalg.norm(mu_i - mu_j) / (s_i + s_j)
+        return jnp.mean(_ncx2_log_pdf(x=dists, nc=nc))
 
     # make sure the gradient is auto calculated correctly
-    d = dists[1][4]
-    params = [mu[0], mu[1], sigma_square[0], sigma_square[1]]
-    check_grads(loss_one_pair, (params, d), order=1)
+    # d = dists[0]
+    # params = [mu[0], mu[1], sigma_square[0], sigma_square[1]]
+    # check_grads(loss_one_pair, (params, d), order=1)
 
-    loss_grad = jax.jit(jax.grad(loss_one_pair))
-    loss_and_grad = jax.jit(jax.value_and_grad(loss_one_pair))
+    # params = [mu[[idx0]], mu[[idx1]], sigma_square[[idx0]], sigma_square[[idx1]]]
+    # check_grads(loss_all_pairs, (params, dists), order=1)
 
-    N = len(all_pairs)
+    # loss_grad = jax.jit(jax.grad(loss_all_pairs))
+    loss_and_grad = jax.jit(jax.value_and_grad(loss_all_pairs))
+
     for epoch in range(epochs):
-        loss = 0.0
-        for i, j in all_pairs:
-            params = [mu[i], mu[j], sigma_square[i], sigma_square[j]]
-            d = dists[i][j]
-            # grads = loss_grad(params, d)
-            loss_p, grads = loss_and_grad(params, d)
-            loss = loss + loss_p
-
-            # think to update after each pair, or update in batch, or update in epoch
-            # preform update using jax.ops.index_add (to accumulate gradient)
-            mu = jax.ops.index_add(mu, [i, j], [grads[0], grads[1]])
-            sigma_square = jax.ops.index_add(sigma_square, [i, j], [grads[2], grads[3]])
-
-        print(epoch, loss / N)
+        params = [mu[[idx0]], mu[[idx1]], sigma_square[[idx0]], sigma_square[[idx1]]]
+        loss, grads = loss_and_grad(params, dists)
+        mu = jax.ops.index_add(mu, [[idx0]], lr * grads[0])
+        mu = jax.ops.index_add(mu, [[idx1]], lr * grads[1])
+        sigma_square = jax.ops.index_add(sigma_square, [[idx0]], lr * grads[2])
+        sigma_square = jax.ops.index_add(sigma_square, [[idx1]], lr * grads[3])
+        print(epoch, loss)
 
     return mu, sigma_square
 
