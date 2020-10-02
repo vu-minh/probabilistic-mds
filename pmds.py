@@ -47,8 +47,8 @@ def _ncx2_pdf(x, nc):  # df=2
 def init_params(n_samples, n_components=2, random_state=42):
     key_m, key_s = random.split(random.PRNGKey(random_state))
     mu = random.normal(key_m, (n_samples, n_components))
-    # ss = jax.nn.softplus(1e-2 * random.normal(key_s, (n_samples,)))
-    ss = jax.nn.softplus(1e-2 * jnp.ones(n_samples))
+    ss = jax.nn.softplus(5e-2 * random.normal(key_s, (n_samples,)))
+    # ss = jax.nn.softplus(1e-2 * jnp.ones(n_samples))
     return [mu, ss]
 
 
@@ -65,9 +65,9 @@ def test_grad_loss(loss_func, mu, ss, dists, batch_size=100):
     check_grads(loss_func, (*params, dists[random_indices(batch_size)]), order=1)
 
 
-def pmds(p_dists, n_samples=100, random_state=42, lr=5e-2, epochs=20):
+def pmds(p_dists, n_samples=100, random_state=42, lr=3e-3, epochs=100):
     n_components = 2
-    batch_size = 2500 // 2
+    batch_size = len(p_dists) // 1
 
     mu, ss = init_params(n_samples, n_components, random_state)
 
@@ -78,23 +78,25 @@ def pmds(p_dists, n_samples=100, random_state=42, lr=5e-2, epochs=20):
 
     def loss_one_pair(mu_i, mu_j, s_i, s_j, d):
         nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
-        return _ncx2_log_pdf(x=d, nc=nc)
+        return -_ncx2_log_pdf(x=d, nc=nc)
 
     check_grads(loss_one_pair, [mu[0], mu[1], ss[0], ss[1], p_dists[0]], order=1)
+    # test_grad_loss(loss_one_pair, mu, ss, p_dists, batch_size)
 
-    # loss_and_grads = jax.jit(jax.value_and_grad(loss_one_pair))
     loss_and_grads_batched = jax.vmap(
-        jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1])),
+        # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
+        jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3])),
+        # parallel for all input params
         in_axes=(0, 0, 0, 0, 0),
+        # scalar output
         out_axes=0,
     )
 
     all_loss = []
+    stop = False
     for epoch in range(epochs):
         loss = 0.0
-        for i, batch in enumerate(
-            chunks(dists_with_indices, batch_size, shuffle=False)
-        ):
+        for i, batch in enumerate(chunks(dists_with_indices, batch_size)):
             # unpatch pairwise distances and indices of points in each pair
             dists, pair_indices = list(zip(*batch))
             i0, i1 = list(zip(*pair_indices))
@@ -108,18 +110,26 @@ def pmds(p_dists, n_samples=100, random_state=42, lr=5e-2, epochs=20):
             loss_batch, grads = loss_and_grads_batched(
                 mu_i, mu_j, ss_i, ss_j, jnp.array(dists)
             )
+            if jnp.any(jnp.isnan(loss_batch)):
+                stop = True
+                break
             loss += jnp.mean(loss_batch)
 
             # update gradient for the corresponding related indices
             grads_mu = jnp.concatenate((lr * grads[0], lr * grads[1]), axis=0)
-            indices_mu = i0 + i1
-            assert grads_mu.shape[0] == len(indices_mu)
+            grads_ss = jnp.concatenate((lr * grads[2], lr * grads[3]), axis=0)
+            related_indices = i0 + i1
+            assert grads_mu.shape[0] == grads_ss.shape[0] == len(related_indices)
 
-            mu = jax.ops.index_add(mu, indices_mu, grads_mu)
+            mu = jax.ops.index_add(mu, related_indices, -grads_mu)
+            ss = jax.ops.index_add(ss, related_indices, -grads_ss)
+
+        if stop:
+            break
 
         loss /= i + 1
         all_loss.append(loss)
-        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}")
+        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}, avg_ss={jnp.mean(ss):.5f}")
 
     return mu, ss, all_loss
 
