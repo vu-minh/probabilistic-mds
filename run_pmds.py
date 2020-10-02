@@ -5,6 +5,7 @@ from sklearn.datasets import load_iris, load_digits, load_wine
 from sklearn.utils import shuffle
 from sklearn.manifold import MDS
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
 
 from pmds import pmds
@@ -41,7 +42,10 @@ if __name__ == "__main__":
     print(X.shape, y.shape)
 
     # test standardize input data
-    # X = StandardScaler().fit_transform(X)
+    X = StandardScaler().fit_transform(X)
+    if len(X) > 10:
+        X = PCA(0.95).fit_transform(X)
+        print("[Dataset] After PCA: ", X.shape)
 
     D = pdist(X)
     res = run_pdms(D, N=len(X), labels=y)

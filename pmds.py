@@ -1,24 +1,15 @@
 # Simple probabilistic MDS with jax
-from functools import partial
-from itertools import chain, islice, combinations
-
-from typing import Any, Callable, List, NamedTuple, Optional, Sequence, Union, Tuple
+from itertools import combinations
 
 import numpy as np
-from scipy.special import ive
 
 import jax
 import jax.numpy as jnp
 from jax import random
-from jax.scipy.special import xlogy, i0e, i1e
+from jax.scipy.special import i0e  # xlogy, i1e
 from jax.test_util import check_grads
 
 from utils import chunks
-
-
-Array = Any
-DType = Any
-Shape = Sequence[int]
 
 
 def _ncx2_log_pdf(x, nc):
@@ -53,24 +44,11 @@ def _ncx2_pdf(x, nc):  # df=2
     return jnp.exp(_ncx2_log_pdf(x, nc))
 
 
-# # loss function for each pair (slow but stable and pass check_grads)
-# def loss_one_pair(params, d):
-#     mu_i, mu_j, s_i, s_j = params
-#     nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
-#     return _ncx2_log_pdf(x=d, nc=nc)
-#
-#
-# # NOT STABLE
-# def loss_all_pairs(params, dists):
-#     mu_i, mu_j, s_i, s_j = params
-#     nc = jnp.linalg.norm(mu_i - mu_j) / (s_i + s_j)
-#     return jnp.sum(_ncx2_log_pdf(x=dists, nc=nc))
-
-
 def init_params(n_samples, n_components=2, random_state=42):
     key_m, key_s = random.split(random.PRNGKey(random_state))
     mu = random.normal(key_m, (n_samples, n_components))
-    ss = jax.nn.softplus(1e-2 * random.normal(key_s, (n_samples,)))
+    # ss = jax.nn.softplus(1e-2 * random.normal(key_s, (n_samples,)))
+    ss = jax.nn.softplus(1e-2 * jnp.ones(n_samples))
     return [mu, ss]
 
 
@@ -84,15 +62,14 @@ def test_grad_loss(loss_func, mu, ss, dists, batch_size=100):
         ss[random_indices(batch_size)],
         ss[random_indices(batch_size)],
     ]
-    check_grads(loss_func, (params, dists[random_indices(batch_size)]), order=1)
+    check_grads(loss_func, (*params, dists[random_indices(batch_size)]), order=1)
 
 
-def pmds(p_dists, n_samples=100, random_state=42, lr=10, epochs=20):
+def pmds(p_dists, n_samples=100, random_state=42, lr=5e-2, epochs=20):
     n_components = 2
-    batch_size = 2500
+    batch_size = 2500 // 2
 
     mu, ss = init_params(n_samples, n_components, random_state)
-    # test_grad_loss(jax.jit(loss_one_pair), mu, ss, p_dists, batch_size)
 
     # patch pairwise distances and indices of each pairs together
     all_pairs = list(combinations(range(n_samples), 2))
@@ -107,49 +84,42 @@ def pmds(p_dists, n_samples=100, random_state=42, lr=10, epochs=20):
 
     # loss_and_grads = jax.jit(jax.value_and_grad(loss_one_pair))
     loss_and_grads_batched = jax.vmap(
-        jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3])),
+        jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1])),
         in_axes=(0, 0, 0, 0, 0),
         out_axes=0,
     )
 
-    def loop_one_epoch():
+    all_loss = []
+    for epoch in range(epochs):
         loss = 0.0
         for i, batch in enumerate(
             chunks(dists_with_indices, batch_size, shuffle=False)
         ):
             # unpatch pairwise distances and indices of points in each pair
             dists, pair_indices = list(zip(*batch))
-            params = params_for_each_batch(pair_indices)
-            assert len(params[0]) <= batch_size
+            i0, i1 = list(zip(*pair_indices))
+            i0, i1 = list(i0), list(i1)
 
-            loss_i = step(i, params, pair_indices, jnp.array(dists))
-            # print("\t", i, loss_i)
-            loss += loss_i
-        return loss / (i + 1)
+            # get the params for related indices from global `mu` and `ss`
+            mu_i, mu_j, ss_i, ss_j = mu[i0], mu[i1], ss[i0], ss[i1]
+            assert len(mu_i) <= batch_size
 
-    def params_for_each_batch(pair_indices):
-        i0, i1 = list(zip(*pair_indices))
-        return [mu[[i0]], mu[[i1]], ss[[i0]], ss[[i1]]]
+            # calculate loss and gradients in each batch
+            loss_batch, grads = loss_and_grads_batched(
+                mu_i, mu_j, ss_i, ss_j, jnp.array(dists)
+            )
+            loss += jnp.mean(loss_batch)
 
-    def step(i, params, pair_indices, dists):
-        mu_i, mu_j, ss_i, ss_j = params
-        loss, grads = loss_and_grads_batched(mu_i, mu_j, ss_i, ss_j, dists)
-        mu, ss = update_params(grads, pair_indices)
-        return jnp.mean(loss)
+            # update gradient for the corresponding related indices
+            grads_mu = jnp.concatenate((lr * grads[0], lr * grads[1]), axis=0)
+            indices_mu = i0 + i1
+            assert grads_mu.shape[0] == len(indices_mu)
 
-    def update_params(grads, pair_indices):
-        i0, i1 = list(zip(*pair_indices))
-        new_mu = jax.ops.index_add(mu, [i0], -lr * jnp.mean(grads[0], axis=0))
-        new_mu = jax.ops.index_add(new_mu, [i1], -lr * jnp.mean(grads[1], axis=0))
-        new_ss = jax.ops.index_add(ss, [i0], -lr * jnp.mean(grads[2], axis=0))
-        new_ss = jax.ops.index_add(new_ss, [i1], -lr * jnp.mean(grads[3], axis=0))
-        return [new_mu, new_ss]
+            mu = jax.ops.index_add(mu, indices_mu, grads_mu)
 
-    all_loss = []
-    for epoch in range(epochs):
-        loss = loop_one_epoch()
+        loss /= i + 1
         all_loss.append(loss)
-        print(epoch, loss)
+        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}")
 
     return mu, ss, all_loss
 
