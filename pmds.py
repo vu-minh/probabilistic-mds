@@ -1,18 +1,19 @@
 # Simple probabilistic MDS with jax
 from itertools import combinations
 
+import mlflow
 import numpy as np
 
 import jax
 import jax.numpy as jnp
 from jax import random
-from jax.scipy.special import i0e  # xlogy, i1e
+from jax.scipy.special import xlogy, i0e, i1e
 from jax.test_util import check_grads
 
 from utils import chunks
 
 
-def _ncx2_log_pdf(x, nc):
+def _ncx2_log_pdf(x, df, nc):
     # We use (xs**2 + ns**2)/2 = (xs - ns)**2/2  + xs*ns, and include the
     # factor of exp(-xs*ns) into the ive function to improve numerical
     # stability at large values of xs. See also `rice.pdf`.
@@ -32,16 +33,20 @@ def _ncx2_log_pdf(x, nc):
     # res = xlogy(df2/2.0, x/nc) - 0.5*(xs - ns)**2
     # res += np.log(ive(df2, xs*ns) / 2.0)
 
-    # x: column vector of N data point
-
     xs, ns = jnp.sqrt(x), jnp.sqrt(nc)
     res = -jnp.log(2.0) - 0.5 * (xs - ns) ** 2
-    res += jnp.log(i0e(xs * ns))
+    if df == 2:
+        res += jnp.log(i0e(xs * ns))
+    elif df == 4:
+        res += 0.5 * (jnp.log(x) - jnp.log(nc))
+        res += jnp.log(i1e(xs * ns))
+    else:
+        raise ValueError("logpdf of NonCentral X-square only support dof of 2 or 4")
     return res.reshape(())
 
 
-def _ncx2_pdf(x, nc):  # df=2
-    return jnp.exp(_ncx2_log_pdf(x, nc))
+def _ncx2_pdf(x, df, nc):
+    return jnp.exp(_ncx2_log_pdf(x, df, nc))
 
 
 def init_params(n_samples, n_components=2, random_state=42):
@@ -65,24 +70,70 @@ def test_grad_loss(loss_func, mu, ss, dists, batch_size=100):
     check_grads(loss_func, (*params, dists[random_indices(batch_size)]), order=1)
 
 
-def pmds(p_dists, n_samples=100, random_state=42, lr=3e-3, epochs=100):
-    n_components = 2
-    batch_size = len(p_dists) // 1
+def pmds(
+    p_dists,
+    n_samples,
+    n_components=2,
+    batch_size=0,
+    random_state=42,
+    lr=1e-3,
+    epochs=20,
+):
+    """Probabilistic MDS according to Hefner model 1958.
 
+    Parameters
+    ----------
+    p_dists : list(float) or list(tuple(int, int, float))
+        List of input pairwise distances.
+        Can be a list of scalar [d_{ij}],
+        or a list of pairwise distances with indices [(i, j), d_{ij}]
+    n_samples : int
+        Number of points in the dataset.
+    n_components : int, defaults to 2
+        Number of output dimensions in the LD space
+        Now only accept 2 or 4.
+    batch_size : int, defaults to 0 meaning that to use all pairs in a batch
+        Number of pairs processed in parallel using jax.vmap
+    random_state : int, defaults to 42
+        random_state for jax random generator for params initialization
+    lr : float, defaults to 1e-3
+        learning rate for standard SGD
+    epochs : int, defaults to 20
+        Number of epochs
+
+    Returns:
+    --------
+    mu : ndarray (n_samples, n_components)
+        Location estimation for points in LD space.
+    ss : ndarray (n_samples,)
+        Sigma square, variance estimation for each point.
+    all_loss : list of float
+        List of loss values for each iteration.
+    """
+    assert n_components in [2, 4]
+    batch_size = batch_size or len(p_dists)
     mu, ss = init_params(n_samples, n_components, random_state)
 
     # patch pairwise distances and indices of each pairs together
-    all_pairs = list(combinations(range(n_samples), 2))
-    assert len(p_dists) == len(all_pairs)
-    dists_with_indices = list(zip(p_dists, all_pairs))
+    if isinstance(p_dists[0], float):
+        all_pairs = list(combinations(range(n_samples), 2))
+        assert len(p_dists) == len(all_pairs)
+        dists_with_indices = list(zip(p_dists, all_pairs))
+    else:
+        dists_with_indices = p_dists
 
+    # function to calculate log pdf of X-square for a single input `d` given the params.
     def loss_one_pair(mu_i, mu_j, s_i, s_j, d):
         nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
-        return -_ncx2_log_pdf(x=d, nc=nc)
+        return -_ncx2_log_pdf(x=d, df=n_components, nc=nc)
 
-    check_grads(loss_one_pair, [mu[0], mu[1], ss[0], ss[1], p_dists[0]], order=1)
+    # make sure autograd work correctly with the approximation log pdf of X-square
+    check_grads(
+        loss_one_pair, [mu[0], mu[1], ss[0], ss[1], dists_with_indices[0][0]], order=1
+    )
     # test_grad_loss(loss_one_pair, mu, ss, p_dists, batch_size)
 
+    # prepare the log pdf function of one sample to run in batch mode
     loss_and_grads_batched = jax.vmap(
         # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
         jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3])),
@@ -125,10 +176,14 @@ def pmds(p_dists, n_samples=100, random_state=42, lr=3e-3, epochs=100):
             ss = jax.ops.index_add(ss, related_indices, -grads_ss)
 
         if stop:
+            print("[DEBUG]: Stop while encounting NaN in logpdf of X-square")
             break
 
-        loss /= i + 1
+        loss = float(loss / (i + 1))
         all_loss.append(loss)
+
+        mlflow.log_metric("loss", loss)
+        mlflow.log_metric("mean_ss", float(jnp.mean(ss)))
         print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}, avg_ss={jnp.mean(ss):.5f}")
 
     return mu, ss, all_loss
