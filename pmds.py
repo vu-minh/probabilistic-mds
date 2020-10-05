@@ -1,6 +1,6 @@
 # Simple probabilistic MDS with jax
 from itertools import combinations
-
+import math
 import mlflow
 import numpy as np
 
@@ -11,6 +11,10 @@ from jax.scipy.special import xlogy, i0e, i1e
 from jax.test_util import check_grads
 
 from utils import chunks
+
+
+EPSILON = 1e-7
+SCALE = 1e-5
 
 
 def _ncx2_log_pdf(x, df, nc):
@@ -33,6 +37,7 @@ def _ncx2_log_pdf(x, df, nc):
     # res = xlogy(df2/2.0, x/nc) - 0.5*(xs - ns)**2
     # res += np.log(ive(df2, xs*ns) / 2.0)
 
+    # assert jnp.all(nc > 0), "Encouting non-positive nc params of X-square dist."
     xs, ns = jnp.sqrt(x), jnp.sqrt(nc)
     res = -jnp.log(2.0) - 0.5 * (xs - ns) ** 2
     if df == 2:
@@ -47,27 +52,6 @@ def _ncx2_log_pdf(x, df, nc):
 
 def _ncx2_pdf(x, df, nc):
     return jnp.exp(_ncx2_log_pdf(x, df, nc))
-
-
-def init_params(n_samples, n_components=2, random_state=42):
-    key_m, key_s = random.split(random.PRNGKey(random_state))
-    mu = random.normal(key_m, (n_samples, n_components))
-    ss = jax.nn.softplus(5e-2 * random.normal(key_s, (n_samples,)))
-    # ss = jax.nn.softplus(1e-2 * jnp.ones(n_samples))
-    return [mu, ss]
-
-
-def test_grad_loss(loss_func, mu, ss, dists, batch_size=100):
-    # make sure the gradient is auto calculated correctly
-    N = len(ss)
-    random_indices = lambda s: np.random.choice(N, size=s, replace=True)
-    params = [
-        mu[random_indices(batch_size)],
-        mu[random_indices(batch_size)],
-        ss[random_indices(batch_size)],
-        ss[random_indices(batch_size)],
-    ]
-    check_grads(loss_func, (*params, dists[random_indices(batch_size)]), order=1)
 
 
 def pmds(
@@ -110,9 +94,16 @@ def pmds(
     all_loss : list of float
         List of loss values for each iteration.
     """
+    print("[DEBUG]: using learning rate: ", lr)
+
     assert n_components in [2, 4]
     batch_size = batch_size or len(p_dists)
-    mu, ss = init_params(n_samples, n_components, random_state)
+
+    # init mu and sigma square
+    key_m, key_s = random.split(random.PRNGKey(random_state))
+    mu = random.normal(key_m, (n_samples, n_components))
+    ss_unc = random.normal(key_s, (n_samples,))
+    # ss = EPSILON + jax.nn.softplus(SCALE * ss_unc)
 
     # patch pairwise distances and indices of each pairs together
     if isinstance(p_dists[0], float):
@@ -128,9 +119,9 @@ def pmds(
         return -_ncx2_log_pdf(x=d, df=n_components, nc=nc)
 
     # make sure autograd work correctly with the approximation log pdf of X-square
-    check_grads(
-        loss_one_pair, [mu[0], mu[1], ss[0], ss[1], dists_with_indices[0][0]], order=1
-    )
+    # check_grads(
+    #     loss_one_pair, [mu[0], mu[1], ss[0], ss[1], dists_with_indices[0][0]], order=1
+    # )
     # test_grad_loss(loss_one_pair, mu, ss, p_dists, batch_size)
 
     # prepare the log pdf function of one sample to run in batch mode
@@ -154,13 +145,16 @@ def pmds(
             i0, i1 = list(i0), list(i1)
 
             # get the params for related indices from global `mu` and `ss`
-            mu_i, mu_j, ss_i, ss_j = mu[i0], mu[i1], ss[i0], ss[i1]
+            mu_i, mu_j = mu[i0], mu[i1]
+            ss_i = EPSILON + jax.nn.softplus(SCALE * ss_unc[i0])
+            ss_j = EPSILON + jax.nn.softplus(SCALE * ss_unc[i1])
             assert len(mu_i) <= batch_size
 
             # calculate loss and gradients in each batch
             loss_batch, grads = loss_and_grads_batched(
                 mu_i, mu_j, ss_i, ss_j, jnp.array(dists)
             )
+
             if jnp.any(jnp.isnan(loss_batch)):
                 stop = True
                 break
@@ -172,8 +166,18 @@ def pmds(
             related_indices = i0 + i1
             assert grads_mu.shape[0] == grads_ss.shape[0] == len(related_indices)
 
-            mu = jax.ops.index_add(mu, related_indices, -grads_mu)
-            ss = jax.ops.index_add(ss, related_indices, -grads_ss)
+            # update gradient for mu
+            mu = jax.ops.index_add(mu, related_indices, -grads_mu / batch_size)
+
+            # update gradient for constrained variable ss
+            # first, calculate gradient for unconstrained variable ss_unc
+            grads_ss_unc = (
+                grads_ss * jax.nn.sigmoid(SCALE * ss_unc[related_indices]) * SCALE
+            )
+            # then, update the unconstrained variable ss_unc
+            ss_unc = jax.ops.index_add(
+                ss_unc, related_indices, -grads_ss_unc / batch_size
+            )
 
         if stop:
             print("[DEBUG]: Stop while encounting NaN in logpdf of X-square")
@@ -183,9 +187,11 @@ def pmds(
         all_loss.append(loss)
 
         mlflow.log_metric("loss", loss)
-        mlflow.log_metric("mean_ss", float(jnp.mean(ss)))
-        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}, avg_ss={jnp.mean(ss):.5f}")
+        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}")
 
+    ss = EPSILON + jax.nn.softplus(SCALE * ss_unc)
+    print("[DEBUG] mean ss: ", float(jnp.mean(ss)))
+    mlflow.log_metric("mean_ss", float(jnp.mean(ss)))
     return mu, ss, all_loss
 
 

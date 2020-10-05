@@ -1,5 +1,5 @@
-import numpy as np
 from matplotlib import pyplot as plt
+import mlflow
 
 from sklearn.datasets import load_iris, load_digits, load_wine, load_breast_cancer
 from sklearn.utils import shuffle
@@ -11,15 +11,15 @@ from scipy.spatial.distance import pdist, squareform
 from pmds import pmds
 
 
-def run_pdms(D, N, labels=None):
+def run_pdms(D, N, args, labels=None):
     Z, Z_var, losses = pmds(
         D,
         n_samples=N,
-        n_components=2,
-        batch_size=0,
-        epochs=20,
-        lr=1e-1,
-        random_state=42,
+        n_components=args.n_components,
+        batch_size=args.batch_size,
+        epochs=args.epochs,
+        lr=args.learning_rate,
+        random_state=args.random_state,
     )
 
     # original MDS
@@ -41,9 +41,7 @@ def run_pdms(D, N, labels=None):
 
 
 if __name__ == "__main__":
-    import os, sys
-    import mlflow
-    from mlflow import log_metric, log_param, log_artifact
+    import os
     import argparse
     from config import pre_config
 
@@ -51,13 +49,14 @@ if __name__ == "__main__":
     argm = parser.add_argument
 
     argm("--dataset_name", "-d")
-    argm("--seed", "-s", default=2020, type=int, help="Random seed")
-    argm("--pca", default=0.95, type=float, help="Run PCA on raw data")
+    argm("--random_state", "-s", default=2020, type=int, help="Random seed")
+    argm("--pca", type=float, help="Run PCA on raw data")
     argm("--std", action="store_true", help="Standardize the data")
     argm("--n_samples", "-n", type=int, help="Number datapoints")
     argm("--n_components", default=2, type=int, help="Dimensionality in LD, 2 or 4")
     argm("--learning_rate", "-lr", default=1e-3, type=float, help="Learning rate SGD")
     argm("--batch_size", "-b", default=0, type=int, help="Batch size SGD")
+    argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
 
     args = parser.parse_args()
     print("[DEBUG] input args: ", args)
@@ -75,6 +74,8 @@ if __name__ == "__main__":
         "digits": load_digits,
         "breast_cancer": load_breast_cancer,
     }[config.dataset_name]
+    if not os.path.exists(plot_dir):
+        os.mkdir(plot_dir)
 
     # shuffle dataset, set `n_samples=None` to take all data
     X, y = shuffle(*load_func(return_X_y=True), n_samples=config.n_samples)
@@ -84,7 +85,7 @@ if __name__ == "__main__":
     if config.std:
         print("Standardize data")
         X = StandardScaler().fit_transform(X)
-    if config.pca and X.shape[1] > 10:
+    if config.pca and X.shape[1] > 30:
         X = PCA(0.9).fit_transform(X)
         print("[Dataset] After PCA: ", X.shape)
 
@@ -94,4 +95,4 @@ if __name__ == "__main__":
     mlflow.set_experiment("pmds01")
     with mlflow.start_run(run_name=config.dataset_name):
         mlflow.log_params(vars(config))
-        res = run_pdms(D, N=len(X), labels=y)
+        res = run_pdms(D, N=len(X), args=config, labels=y)
