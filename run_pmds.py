@@ -1,3 +1,6 @@
+# import numpy as np
+import random
+from itertools import combinations
 from matplotlib import pyplot as plt
 import mlflow
 
@@ -12,8 +15,19 @@ from pmds import pmds
 
 
 def run_pdms(D, N, args, labels=None):
+    # pack pair indices with distances
+    all_pairs = list(combinations(range(N), 2))
+    assert len(D) == len(all_pairs)
+    dists_with_indices = list(zip(D, all_pairs))
+    n_pairs = len(dists_with_indices)
+
+    # create non-complete data: sample from pairwise distances
+    percent = 0.5
+    p_dists = random.sample(dists_with_indices, k=int(percent * n_pairs))
+    print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(p_dists)}")
+
     Z, Z_var, losses = pmds(
-        D,
+        p_dists,
         n_samples=N,
         n_components=args.n_components,
         batch_size=args.batch_size,
