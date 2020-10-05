@@ -94,16 +94,14 @@ def pmds(
     all_loss : list of float
         List of loss values for each iteration.
     """
-    print("[DEBUG]: using learning rate: ", lr)
-
     assert n_components in [2, 4]
     batch_size = batch_size or len(p_dists)
+    print(f"[DEBUG]: using learning rate: {lr} and batch size of {batch_size}")
 
-    # init mu and sigma square
+    # init mu and sigma square. Transform unconstrained sigma square `ss_unc` to `ss`.
     key_m, key_s = random.split(random.PRNGKey(random_state))
     mu = random.normal(key_m, (n_samples, n_components))
     ss_unc = random.normal(key_s, (n_samples,))
-    # ss = EPSILON + jax.nn.softplus(SCALE * ss_unc)
 
     # patch pairwise distances and indices of each pairs together
     if isinstance(p_dists[0], float):
@@ -118,12 +116,6 @@ def pmds(
         nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
         return -_ncx2_log_pdf(x=d, df=n_components, nc=nc)
 
-    # make sure autograd work correctly with the approximation log pdf of X-square
-    # check_grads(
-    #     loss_one_pair, [mu[0], mu[1], ss[0], ss[1], dists_with_indices[0][0]], order=1
-    # )
-    # test_grad_loss(loss_one_pair, mu, ss, p_dists, batch_size)
-
     # prepare the log pdf function of one sample to run in batch mode
     loss_and_grads_batched = jax.vmap(
         # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
@@ -135,7 +127,6 @@ def pmds(
     )
 
     all_loss = []
-    stop = False
     for epoch in range(epochs):
         loss = 0.0
         for i, batch in enumerate(chunks(dists_with_indices, batch_size)):
@@ -156,8 +147,10 @@ def pmds(
             )
 
             if jnp.any(jnp.isnan(loss_batch)):
-                stop = True
-                break
+                raise ValueError(
+                    "NaN encountered in loss value."
+                    "Check if the `nc` params of X-square dist. are non-positive"
+                )
             loss += jnp.mean(loss_batch)
 
             # update gradient for the corresponding related indices
@@ -178,11 +171,6 @@ def pmds(
             ss_unc = jax.ops.index_add(
                 ss_unc, related_indices, -grads_ss_unc / batch_size
             )
-
-        if stop:
-            print("[DEBUG]: Stop while encounting NaN in logpdf of X-square")
-            break
-
         loss = float(loss / (i + 1))
         all_loss.append(loss)
 
