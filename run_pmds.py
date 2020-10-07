@@ -22,7 +22,7 @@ def run_pdms(D, N, args, labels=None):
     n_pairs = len(dists_with_indices)
 
     # create non-complete data: sample from pairwise distances
-    percent = 0.5
+    percent = 1.0
     p_dists = random.sample(dists_with_indices, k=int(percent * n_pairs))
     print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(p_dists)}")
 
@@ -37,7 +37,9 @@ def run_pdms(D, N, args, labels=None):
     )
 
     # original MDS
-    Z0 = MDS(metric="precomputed").fit_transform(squareform(D))
+    Z0 = MDS(
+        metric="precomputed", random_state=args.random_state, verbose=1
+    ).fit_transform(squareform(D))
 
     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 4))
     ax0.set_title("Original MDS")
@@ -63,6 +65,7 @@ if __name__ == "__main__":
     argm = parser.add_argument
 
     argm("--dataset_name", "-d")
+    argm("--use_pre_config", "-c", action="store_true", help="Use params pre-config")
     argm("--random_state", "-s", default=2020, type=int, help="Random seed")
     argm("--pca", type=float, help="Run PCA on raw data")
     argm("--std", action="store_true", help="Standardize the data")
@@ -73,33 +76,30 @@ if __name__ == "__main__":
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
 
     args = parser.parse_args()
+    if args.use_pre_config:
+        # load predefined config and update the config with new input arguments
+        args = argparse.Namespace(**pre_config[args.dataset_name])
     print("[DEBUG] input args: ", args)
 
-    # load predefined config and update the config with new input arguments
-    config = pre_config[args.dataset_name]
-    config.update(vars(args))
-    config = argparse.Namespace(**config)
-    print(config)
-
-    plot_dir = f"plots/{config.dataset_name}"
+    plot_dir = f"plots/{args.dataset_name}"
     load_func = {
         "iris": load_iris,
         "wine": load_wine,
         "digits": load_digits,
         "breast_cancer": load_breast_cancer,
-    }[config.dataset_name]
+    }[args.dataset_name]
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
     # shuffle dataset, set `n_samples=None` to take all data
-    X, y = shuffle(*load_func(return_X_y=True), n_samples=config.n_samples)
+    X, y = shuffle(*load_func(return_X_y=True), n_samples=args.n_samples)
     print(X.shape, y.shape)
 
     # test standardize input data
-    if config.std:
+    if args.std:
         print("Standardize data")
         X = StandardScaler().fit_transform(X)
-    if config.pca and X.shape[1] > 30:
+    if args.pca and X.shape[1] > 30:
         X = PCA(0.9).fit_transform(X)
         print("[Dataset] After PCA: ", X.shape)
 
@@ -107,6 +107,6 @@ if __name__ == "__main__":
     D = pdist(X)
 
     mlflow.set_experiment("pmds01")
-    with mlflow.start_run(run_name=config.dataset_name):
-        mlflow.log_params(vars(config))
-        res = run_pdms(D, N=len(X), args=config, labels=y)
+    with mlflow.start_run(run_name=args.dataset_name):
+        mlflow.log_params(vars(args))
+        res = run_pdms(D, N=len(X), args=args, labels=y)
