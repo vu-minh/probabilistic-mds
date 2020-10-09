@@ -45,4 +45,15 @@ pre_config = {
         std=True,
         pca=None,
     ),
+    "cities_us": dict(
+        dataset_name="cities_us",
+        n_samples=128,
+        n_components=2,
+        batch_size=500,
+        epochs=20,
+        learning_rate=120,
+        random_state=42,
+        std=False,
+        pca=None,
+    ),
 }

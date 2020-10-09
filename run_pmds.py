@@ -4,13 +4,10 @@ from itertools import combinations
 from matplotlib import pyplot as plt
 import mlflow
 
-from sklearn.datasets import load_iris, load_digits, load_wine, load_breast_cancer
-from sklearn.utils import shuffle
 from sklearn.manifold import MDS
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from scipy.spatial.distance import pdist, squareform
+from scipy.spatial.distance import squareform
 
+from dataset import load_dataset
 from pmds import pmds
 
 
@@ -82,31 +79,14 @@ if __name__ == "__main__":
     print("[DEBUG] input args: ", args)
 
     plot_dir = f"plots/{args.dataset_name}"
-    load_func = {
-        "iris": load_iris,
-        "wine": load_wine,
-        "digits": load_digits,
-        "breast_cancer": load_breast_cancer,
-    }[args.dataset_name]
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
-    # shuffle dataset, set `n_samples=None` to take all data
-    X, y = shuffle(*load_func(return_X_y=True), n_samples=args.n_samples)
-    print(X.shape, y.shape)
+    D, labels, N = load_dataset(
+        dataset_name=args.dataset_name, std=args.std, pca=args.pca,
+    )
 
-    # test standardize input data
-    if args.std:
-        print("Standardize data")
-        X = StandardScaler().fit_transform(X)
-    if args.pca and X.shape[1] > 30:
-        X = PCA(0.9).fit_transform(X)
-        print("[Dataset] After PCA: ", X.shape)
-
-    # precompute the pairwise distances
-    D = pdist(X)
-
-    mlflow.set_experiment("pmds01")
+    mlflow.set_experiment("pmds02")
     with mlflow.start_run(run_name=args.dataset_name):
         mlflow.log_params(vars(args))
-        res = run_pdms(D, N=len(X), args=args, labels=y)
+        res = run_pdms(D, N, args=args, labels=labels)
