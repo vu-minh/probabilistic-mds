@@ -1,3 +1,5 @@
+import os
+import joblib
 import numpy as np
 from sklearn import datasets
 from sklearn.utils import shuffle
@@ -5,12 +7,13 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
 
-DISTANCE_DATASET = ["cities_us"]
+
+DISTANCE_DATASET = ["cities_us", "qpcr"]
 
 
-def load_dataset(dataset_name, std=False, pca=None, n_samples=None):
+def load_dataset(dataset_name, data_dir="./data", std=False, pca=None, n_samples=None):
     if dataset_name in DISTANCE_DATASET:
-        return load_distance_dataset(dataset_name)
+        return load_distance_dataset(dataset_name, data_dir)
     else:
         return load_traditional_dataset(dataset_name, std, pca, n_samples)
 
@@ -35,17 +38,16 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
         X = PCA(0.9).fit_transform(X)
         print("[Dataset] After PCA: ", X.shape)
 
-    return (pdist(X), labels, len(X))
+    return (pdist(X, "euclidean"), labels, len(X))
 
 
-def load_distance_dataset(dataset_name):
-    return {"cities_us": load_cities_us}[dataset_name]()
+def load_distance_dataset(dataset_name, data_dir):
+    return {"cities_us": load_cities_us, "qpcr": load_qpcr}[dataset_name](data_dir)
 
 
-def load_cities_us(return_X_y=True):
+def load_cities_us(data_dir="./data"):
     from data.cities_us import parse_dists, parse_names
 
-    data_dir = "./data"
     _, labels = parse_names(data_dir)
     dists = parse_dists(data_dir)
     if np.allclose(dists, dists.T):
@@ -53,6 +55,28 @@ def load_cities_us(return_X_y=True):
     return dists, labels, len(labels)
 
 
+def load_qpcr(data_dir="./data"):
+    # license: Copyright (c) 2014, the Open Data Science Initiative
+    # license: https://www.elsevier.com/legal/elsevier-website-terms-and-conditions
+    # Ref: single-cell qPCR data for 48 genes obtained from mice (Guo et al., [1])
+    # Usage with GPLVM: https://pyro.ai/examples/gplvm.html
+    import pandas as pd
+
+    file_path = f"{data_dir}/qprc.z"
+    if not os.path.exists(file_path):
+        URL = "https://raw.githubusercontent.com/sods/ods/master/datasets/guo_qpcr.csv"
+        df = pd.read_csv(URL, index_col=0)
+        dists = pdist(df.to_numpy(), "euclidean")  # note: the columns are normalized
+        label_to_index = {lbl: i for i, lbl in enumerate(df.index.unique().tolist())}
+        labels = np.array([label_to_index[i] for i in df.index])
+        print("Reload dataset: ", labels.shape, dists.shape)
+        joblib.dump((dists, labels), file_path)
+    else:
+        dists, labels = joblib.load(file_path)
+    return dists, labels, len(labels)
+
+
 if __name__ == "__main__":
-    D, labels, N = load_dataset("cities_us")
+    # D, labels, N = load_dataset("cities_us", data_dir="./data")
+    D, labels, N = load_qpcr(data_dir="./data")
     print(labels.shape, D.shape)
