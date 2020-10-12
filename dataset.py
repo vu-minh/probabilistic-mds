@@ -34,8 +34,8 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
     if std:
         print("Standardize data")
         X = StandardScaler().fit_transform(X)
-    if pca and X.shape[1] > 30:
-        X = PCA(0.9).fit_transform(X)
+    if pca:
+        X = PCA(pca).fit_transform(X)
         print("[Dataset] After PCA: ", X.shape)
 
     return (pdist(X, "euclidean"), labels, len(X))

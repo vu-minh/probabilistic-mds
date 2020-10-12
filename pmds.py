@@ -11,7 +11,7 @@ from jax.scipy.special import xlogy, i0e, i1e
 from jax.test_util import check_grads
 
 from utils import chunks
-
+from score import stress
 
 EPSILON = 1e-7
 SCALE = 1e-5
@@ -62,6 +62,7 @@ def pmds(
     random_state=42,
     lr=1e-3,
     epochs=20,
+    debug_D_squareform=None,
 ):
     """Probabilistic MDS according to Hefner model 1958.
 
@@ -172,10 +173,18 @@ def pmds(
                 ss_unc, related_indices, -grads_ss_unc / batch_size
             )
         loss = float(loss / (i + 1))
+        mds_stress = (
+            stress(debug_D_squareform, mu) if debug_D_squareform is not None else 0.0
+        )
         all_loss.append(loss)
 
         mlflow.log_metric("loss", loss)
-        print(f"[DEBUG] epoch {epoch}, loss: {loss:.5f}")
+        mlflow.log_metric("stress", mds_stress)
+        print(
+            f"[DEBUG] epoch {epoch}, loss: {loss:.2f}, stress: {mds_stress:,.2f}"
+            f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
+            f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
+        )
 
     ss = EPSILON + jax.nn.softplus(SCALE * ss_unc)
     print("[DEBUG] mean ss: ", float(jnp.mean(ss)))

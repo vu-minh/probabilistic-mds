@@ -9,19 +9,26 @@ from scipy.spatial.distance import squareform
 
 from dataset import load_dataset
 from pmds import pmds
+from score import stress
 
 
 def run_pdms(D, N, args, labels=None):
     # pack pair indices with distances
     all_pairs = list(combinations(range(N), 2))
     assert len(D) == len(all_pairs)
-    dists_with_indices = list(zip(D, all_pairs))
-    n_pairs = len(dists_with_indices)
+
+    # PMDS use squared Euclidean distances
+    sq_dists_with_indices = list(zip(D ** 2, all_pairs))
+    n_pairs = len(sq_dists_with_indices)
 
     # create non-complete data: sample from pairwise distances
     percent = 1.0
-    p_dists = random.sample(dists_with_indices, k=int(percent * n_pairs))
+    p_dists = random.sample(sq_dists_with_indices, k=int(percent * n_pairs))
     print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(p_dists)}")
+
+    # note: Original metric MDS (and its stress) use Euclidean distances,
+    # Probabilistic MDS uses Squared Euclidean distances.
+    D_squareform = squareform(D)
 
     Z, Z_var, losses = pmds(
         p_dists,
@@ -31,18 +38,29 @@ def run_pdms(D, N, args, labels=None):
         epochs=args.epochs,
         lr=args.learning_rate,
         random_state=args.random_state,
+        debug_D_squareform=D_squareform,
     )
 
     # original MDS
     Z0 = MDS(
-        metric="precomputed", random_state=args.random_state, verbose=1
-    ).fit_transform(squareform(D))
+        dissimilarity="precomputed",
+        metric=True,
+        random_state=args.random_state,
+        verbose=1,
+    ).fit_transform(D_squareform)
+
+    # compare stress of 2 embedding
+    s0, s1 = stress(D_squareform, Z0), stress(D_squareform, Z)
+    print(
+        f"Stress scores Original MDS: {s0:,.2f} \n"
+        f"              PMDS:         {s1:,.2f}, diff = {s1 - s0:,.2f}"
+    )
 
     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 4))
-    ax0.set_title("Original MDS")
+    ax0.set_title(f"Original MDS (stress={s0:,.2f})")
     ax0.scatter(*Z0.T, c=labels, cmap="tab10")
 
-    ax1.set_title("Probabilistic MDS")
+    ax1.set_title(f"Probabilistic MDS (stress={s1:,.2f})")
     ax1.scatter(*Z.T, c=labels, cmap="tab10")
     fig.savefig(f"{plot_dir}/Z.png")
     mlflow.log_artifact(f"{plot_dir}/Z.png")
@@ -82,8 +100,12 @@ if __name__ == "__main__":
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
+    # load pairwise Euclidean distances
     D, labels, N = load_dataset(
-        dataset_name=args.dataset_name, std=args.std, pca=args.pca,
+        dataset_name=args.dataset_name,
+        std=args.std,
+        pca=args.pca,
+        n_samples=args.n_samples,
     )
 
     mlflow.set_experiment("pmds02")
