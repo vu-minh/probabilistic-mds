@@ -8,7 +8,7 @@ from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
 
 
-DISTANCE_DATASET = ["cities_us", "qpcr"]
+DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
 
 
 def load_dataset(dataset_name, data_dir="./data", std=False, pca=None, n_samples=None):
@@ -42,7 +42,11 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
 
 
 def load_distance_dataset(dataset_name, data_dir):
-    return {"cities_us": load_cities_us, "qpcr": load_qpcr}[dataset_name](data_dir)
+    return {
+        "cities_us_toy": load_cities_us_toy,
+        "cities_us": load_cities_us,
+        "qpcr": load_qpcr,
+    }[dataset_name](data_dir)
 
 
 def load_cities_us(data_dir="./data"):
@@ -53,6 +57,12 @@ def load_cities_us(data_dir="./data"):
     if np.allclose(dists, dists.T):
         dists = squareform(dists)
     return dists, labels, len(labels)
+
+
+def load_cities_us_toy(data_dir="./data"):
+    from data.cities_us import parse_toy_data
+
+    return parse_toy_data(data_dir)
 
 
 def load_qpcr(data_dir="./data"):

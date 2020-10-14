@@ -52,6 +52,16 @@ pre_config = {
             std=False,
             pca=None,
         ),
+        "cities_us_toy": dict(
+            n_samples=9,
+            n_components=2,
+            batch_size=0,
+            epochs=10,
+            learning_rate=5,
+            random_state=42,
+            std=False,
+            pca=None,
+        ),
         "qpcr": dict(
             n_samples=437,
             n_components=2,

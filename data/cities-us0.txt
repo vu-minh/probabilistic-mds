@@ -1,0 +1,11 @@
+# Ref: https://www.w3.org/2003/01/geo/test/ustowns/latlong.htm
+[NYC]  40.77   73.98  New York,NY
+[SJC]  37.37  121.92  San Jose,CA
+[LAX]  33.93  118.40  Los Angeles,CA
+[DCA]  38.85   77.04  Washington/Natl,DC
+[MIA]  25.82   80.28  Miami Intl,FL
+[AUS]  30.30   97.70  Austin,TX
+[OLM]  46.97  122.90  Olympia,WA
+[BIS]  46.77  100.75  Bismarck,ND
+[CHI]  41.90   87.65  Chicago,IL
+[RIC]  37.50   77.33  Richmond,VA
