@@ -80,6 +80,7 @@ if __name__ == "__main__":
     argm = parser.add_argument
 
     argm("--dataset_name", "-d")
+    argm("--method_name", "-m", default="MLE", help="How to optimize the model")
     argm("--use_pre_config", "-c", action="store_true", help="Use params pre-config")
     argm("--random_state", "-s", default=2020, type=int, help="Random seed")
     argm("--pca", type=float, help="Run PCA on raw data")
@@ -91,24 +92,25 @@ if __name__ == "__main__":
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
 
     args = parser.parse_args()
+    dataset_name = args.dataset_name
+    method_name = args.method_name
+
     if args.use_pre_config:
         # load predefined config and update the config with new input arguments
-        args = argparse.Namespace(**pre_config[args.dataset_name])
+        config = pre_config[method_name][dataset_name]
+        args = argparse.Namespace(**config)
     print("[DEBUG] input args: ", args)
 
-    plot_dir = f"plots/{args.dataset_name}"
+    plot_dir = f"plots/{method_name}/{dataset_name}"
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
     # load pairwise Euclidean distances
     D, labels, N = load_dataset(
-        dataset_name=args.dataset_name,
-        std=args.std,
-        pca=args.pca,
-        n_samples=args.n_samples,
+        dataset_name, std=args.std, pca=args.pca, n_samples=args.n_samples
     )
 
-    mlflow.set_experiment("pmds02")
-    with mlflow.start_run(run_name=args.dataset_name):
+    mlflow.set_experiment(f"pmds_{method_name}")
+    with mlflow.start_run(run_name=dataset_name):
         mlflow.log_params(vars(args))
         res = run_pdms(D, N, args=args, labels=labels)
