@@ -6,7 +6,7 @@ import mlflow
 from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
 
-from pmds.pmds import pmds, pmds_with_fixed_points
+from pmds.pmds import pmds
 from pmds import score, plot, dataset, config
 
 
@@ -28,7 +28,15 @@ def run_pdms(D, N, args, labels=None):
     # Probabilistic MDS uses Squared Euclidean distances.
     D_squareform = squareform(D)
 
-    Z1, Z1_var, losses = pmds_with_fixed_points(
+    # original MDS
+    Z0 = MDS(
+        dissimilarity="precomputed",
+        metric=True,
+        random_state=args.random_state,
+        verbose=1,
+    ).fit_transform(D_squareform)
+
+    Z1, Z1_var, losses = pmds(
         p_dists,
         n_samples=N,
         n_components=args.n_components,
@@ -38,16 +46,9 @@ def run_pdms(D, N, args, labels=None):
         random_state=args.random_state,
         debug_D_squareform=D_squareform,
         fixed_points=args.fixed_points,
+        # init_mu=Z0,
     )
     plot.line(losses, out_name=f"{plot_dir}/loss.png")
-
-    # original MDS
-    Z0 = MDS(
-        dissimilarity="precomputed",
-        metric=True,
-        random_state=args.random_state,
-        verbose=1,
-    ).fit_transform(D_squareform)
 
     # compare stress of 2 embedding
     s0 = score.stress(D_squareform, Z0)
