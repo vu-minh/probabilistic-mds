@@ -17,11 +17,12 @@ def parse_toy_data(data_dir="."):
             s = line.split()
             lats.append(radians(float(s[1])))
             longs.append(radians(float(s[2])))
-            names.append("".join(s[3:]))
+            names.append(" ".join(s[3:]))
 
     X = np.array(list(zip(lats, longs)))
     dists = haversine_distances(X)  # * 6_371_000 / 1_000 to km
-    return squareform(dists), np.ones(len(names)), len(names)
+    dists /= dists.max()
+    return squareform(dists), np.array(names), len(names)
 
 
 def parse_dists(data_dir="."):

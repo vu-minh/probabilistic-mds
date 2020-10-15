@@ -11,6 +11,7 @@ pre_config = {
             random_state=42,
             std=True,  # standardize
             pca=None,
+            fixed_points=[],
         ),
         "digits": dict(
             n_samples=150,  # 1797
@@ -53,14 +54,15 @@ pre_config = {
             pca=None,
         ),
         "cities_us_toy": dict(
-            n_samples=9,
+            n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=10,
-            learning_rate=5,
+            epochs=80,
+            learning_rate=0.2,
             random_state=42,
             std=False,
             pca=None,
+            fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.8)],
         ),
         "qpcr": dict(
             n_samples=437,

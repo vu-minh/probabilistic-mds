@@ -1,15 +1,13 @@
 # import numpy as np
 import random
 from itertools import combinations
-from matplotlib import pyplot as plt
 import mlflow
 
 from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
 
-from dataset import load_dataset
-from pmds import pmds
-from score import stress
+from pmds.pmds import pmds, pmds_with_fixed_points
+from pmds import score, plot, dataset, config
 
 
 def run_pdms(D, N, args, labels=None):
@@ -30,7 +28,7 @@ def run_pdms(D, N, args, labels=None):
     # Probabilistic MDS uses Squared Euclidean distances.
     D_squareform = squareform(D)
 
-    Z, Z_var, losses = pmds(
+    Z1, Z1_var, losses = pmds_with_fixed_points(
         p_dists,
         n_samples=N,
         n_components=args.n_components,
@@ -39,7 +37,9 @@ def run_pdms(D, N, args, labels=None):
         lr=args.learning_rate,
         random_state=args.random_state,
         debug_D_squareform=D_squareform,
+        fixed_points=args.fixed_points,
     )
+    plot.line(losses, out_name=f"{plot_dir}/loss.png")
 
     # original MDS
     Z0 = MDS(
@@ -50,31 +50,23 @@ def run_pdms(D, N, args, labels=None):
     ).fit_transform(D_squareform)
 
     # compare stress of 2 embedding
-    s0, s1 = stress(D_squareform, Z0), stress(D_squareform, Z)
+    s0 = score.stress(D_squareform, Z0)
+    s1 = score.stress(D_squareform, Z1)
     print(
         f"Stress scores Original MDS: {s0:,.2f} \n"
         f"              PMDS:         {s1:,.2f}, diff = {s1 - s0:,.2f}"
     )
 
-    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 4))
-    ax0.set_title(f"Original MDS (stress={s0:,.2f})")
-    ax0.scatter(*Z0.T, c=labels, cmap="tab10")
-
-    ax1.set_title(f"Probabilistic MDS (stress={s1:,.2f})")
-    ax1.scatter(*Z.T, c=labels, cmap="tab10")
-    fig.savefig(f"{plot_dir}/Z.png")
-    mlflow.log_artifact(f"{plot_dir}/Z.png")
-
-    fig, ax = plt.subplots(1, 1, figsize=(6, 3))
-    ax.plot(losses)
-    fig.savefig(f"{plot_dir}/loss.png")
-    mlflow.log_artifact(f"{plot_dir}/loss.png")
+    titles = [
+        f"Original MDS (stress={s0:,.2f})",
+        f"Probabilistic MDS (stress={s1:,.2f})",
+    ]
+    plot.compare_scatter(Z0, Z1, labels, titles, out_name=f"{plot_dir}/Z.png")
 
 
 if __name__ == "__main__":
     import os
     import argparse
-    from config import pre_config
 
     parser = argparse.ArgumentParser()
     argm = parser.add_argument
@@ -97,7 +89,7 @@ if __name__ == "__main__":
 
     if args.use_pre_config:
         # load predefined config and update the config with new input arguments
-        config = pre_config[method_name][dataset_name]
+        config = config.pre_config[method_name][dataset_name]
         args = argparse.Namespace(**config)
     print("[DEBUG] input args: ", args)
 
@@ -106,8 +98,12 @@ if __name__ == "__main__":
         os.mkdir(plot_dir)
 
     # load pairwise Euclidean distances
-    D, labels, N = load_dataset(
-        dataset_name, std=args.std, pca=args.pca, n_samples=args.n_samples
+    D, labels, N = dataset.load_dataset(
+        dataset_name,
+        data_dir="./data",
+        std=args.std,
+        pca=args.pca,
+        n_samples=args.n_samples,
     )
 
     mlflow.set_experiment(f"pmds_{method_name}")
