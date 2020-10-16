@@ -131,17 +131,20 @@ def pmds(
 
     # function to calculate log pdf of X-square for a single input `d` given the params.
     def loss_one_pair(mu_i, mu_j, s_i, s_j, d):
-        nc = jnp.sum((mu_i - mu_j) ** 2) / (s_i + s_j)
+        s_ij = s_i + s_j + EPSILON  # try to avoid divided by zero
+        nc = jnp.divide(jnp.sum((mu_i - mu_j) ** 2), s_ij)
         return -_ncx2_log_pdf(x=d, df=n_components, nc=nc)
 
     # prepare the log pdf function of one sample to run in batch mode
-    loss_and_grads_batched = jax.vmap(
-        # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
-        jax.jit(jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3])),
-        # parallel for all input params
-        in_axes=(0, 0, 0, 0, 0),
-        # scalar output
-        out_axes=0,
+    loss_and_grads_batched = jax.jit(
+        jax.vmap(
+            # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
+            jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3]),
+            # parallel for all input params
+            in_axes=(0, 0, 0, 0, 0),
+            # scalar output
+            out_axes=0,
+        )
     )
 
     all_loss = []
@@ -156,10 +159,8 @@ def pmds(
 
             # get the params for related indices from global `mu` and `ss`
             mu_i, mu_j = mu[i0], mu[i1]
-            ss_i = jnp.ones(len(i0))
-            # EPSILON + jax.nn.softplus(SCALE * ss_unc[i0])
-            ss_j = jnp.ones(len(i1))
-            # EPSILON + jax.nn.softplus(SCALE * ss_unc[i1])
+            ss_i = EPSILON + jax.nn.softplus(SCALE * ss_unc[i0])
+            ss_j = EPSILON + jax.nn.softplus(SCALE * ss_unc[i1])
             assert len(mu_i) <= batch_size
 
             # calculate loss and gradients in each batch
@@ -190,12 +191,12 @@ def pmds(
                 grads_ss * jax.nn.sigmoid(SCALE * ss_unc[related_indices]) * SCALE
             )
             # then, update the unconstrained variable ss_unc
-            # ss_unc = jax.ops.index_add(
-            #     ss_unc, related_indices, -grads_ss_unc / batch_size
-            # )
+            ss_unc = jax.ops.index_add(
+                ss_unc, related_indices, -grads_ss_unc / batch_size
+            )
             # correct gradient for fixed points
             mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-            # ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
+            ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
         loss = float(loss / (i + 1))
         mds_stress = (

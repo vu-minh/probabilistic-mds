@@ -36,7 +36,7 @@ def run_pdms(D, N, args, labels=None):
         verbose=1,
     ).fit_transform(D_squareform)
 
-    Z1, Z1_var, losses = pmds(
+    Z1, Z1_vars, losses = pmds(
         p_dists,
         n_samples=N,
         n_components=args.n_components,
@@ -62,7 +62,9 @@ def run_pdms(D, N, args, labels=None):
         f"Original MDS (stress={s0:,.2f})",
         f"Probabilistic MDS (stress={s1:,.2f})",
     ]
-    plot.compare_scatter(Z0, Z1, labels, titles, out_name=f"{plot_dir}/Z.png")
+    plot.compare_scatter(
+        Z0, Z1, None, Z1_vars, labels, titles, out_name=f"{plot_dir}/Z.png"
+    )
 
 
 if __name__ == "__main__":
