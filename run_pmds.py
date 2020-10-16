@@ -8,6 +8,7 @@ from scipy.spatial.distance import squareform
 
 from pmds.pmds import pmds
 from pmds import score, plot, dataset, config
+from mds import mds
 
 
 def run_pdms(D, N, args, labels=None):
@@ -36,7 +37,10 @@ def run_pdms(D, N, args, labels=None):
         verbose=1,
     ).fit_transform(D_squareform)
 
-    print("fixed_points=", vars(args).get("fixed_points", []))
+    # MDS with jax
+    Z2 = mds.mds(D, n_samples=N, n_components=args.n_components, lr=2e-2, n_epochs=50)
+
+    # Probabilistic MDS with jax
     Z1, Z1_vars, losses = pmds(
         p_dists,
         n_samples=N,
@@ -54,17 +58,23 @@ def run_pdms(D, N, args, labels=None):
     # compare stress of 2 embedding
     s0 = score.stress(D_squareform, Z0)
     s1 = score.stress(D_squareform, Z1)
+    s2 = score.stress(D_squareform, Z2)
     print(
         f"Stress scores Original MDS: {s0:,.2f} \n"
-        f"              PMDS:         {s1:,.2f}, diff = {s1 - s0:,.2f}"
+        f"              PMDS:         {s1:,.2f}, diff1 = {s1 - s0:,.2f}\n"
+        f"              MDS-jax:      {s2:,.2f}, diff2 = {s2 - s0:,.2f}"
     )
 
     titles = [
         f"Original MDS (stress={s0:,.2f})",
         f"Probabilistic MDS (stress={s1:,.2f})",
+        f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, Z1_vars, labels, titles, out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, Z1_vars, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+    )
+    plot.compare_scatter(
+        Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
     )
 
 

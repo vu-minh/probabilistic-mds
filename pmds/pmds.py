@@ -15,7 +15,7 @@ from .score import stress
 
 
 EPSILON = 1e-6
-SCALE = 1e-1  # 1e-3
+SCALE = 1e-3
 
 
 def _ncx2_log_pdf(x, df, nc):
