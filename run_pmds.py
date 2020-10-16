@@ -36,6 +36,7 @@ def run_pdms(D, N, args, labels=None):
         verbose=1,
     ).fit_transform(D_squareform)
 
+    print("fixed_points=", vars(args).get("fixed_points", []))
     Z1, Z1_vars, losses = pmds(
         p_dists,
         n_samples=N,
@@ -45,7 +46,7 @@ def run_pdms(D, N, args, labels=None):
         lr=args.learning_rate,
         random_state=args.random_state,
         debug_D_squareform=D_squareform,
-        fixed_points=args.fixed_points,
+        fixed_points=vars(args).get("fixed_points", []),
         # init_mu=Z0,
     )
     plot.line(losses, out_name=f"{plot_dir}/loss.png")
@@ -102,7 +103,7 @@ if __name__ == "__main__":
 
     # load pairwise Euclidean distances
     D, labels, N = dataset.load_dataset(
-        dataset_name,
+        args.dataset_name,
         data_dir="./data",
         std=args.std,
         pca=args.pca,

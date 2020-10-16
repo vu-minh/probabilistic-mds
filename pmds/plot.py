@@ -13,22 +13,20 @@ def line(points, out_name="line.png"):
 def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 6)) if ax is None else (None, ax)
 
-    p = {}
+    p = {} if Z_vars is None else {"marker": "+"}
     if labels is None:
         ...
     elif isinstance(labels[0], str):
-        if Z_vars is not None:
-            p = dict(marker="+")
         for (x, y), s in zip(Z, labels):
-            ax.text(x - 0.07, y + 0.03, s)
+            ax.text(x, y * 1.05, s, ha="center", va="center")
     else:
-        p = dict(c=labels, cmap="tab10")
+        p.update({"c": labels, "cmap": "tab10"})
 
     ax.set_title(title)
     ax.scatter(*Z.T, **p)
 
     if Z_vars is not None and Z_vars.shape == (Z.shape[0],):
-        ax.scatter(*Z.T, marker="o", s=Z_vars * 500, alpha=0.2)
+        ax.scatter(*Z.T, marker="o", c=labels, s=Z_vars * 500, alpha=0.05)
 
     if fig is not None:
         fig.savefig(out_name, bbox_inches="tight")

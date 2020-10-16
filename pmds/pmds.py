@@ -14,8 +14,8 @@ from .utils import chunks
 from .score import stress
 
 
-EPSILON = 1e-7
-SCALE = 1e-6
+EPSILON = 1e-6
+SCALE = 1e-1  # 1e-3
 
 
 def _ncx2_log_pdf(x, df, nc):
@@ -109,17 +109,19 @@ def pmds(
     # init mu and sigma square. Transform unconstrained sigma square `ss_unc` to `ss`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_s = random.split(random.PRNGKey(random_state))
-    ss_unc = random.normal(key_s, (n_samples,))
+    # ss_unc = random.normal(key_s, (n_samples,))
+    ss_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
         mu = random.normal(key_m, (n_samples, n_components))
 
     # fixed points
-    fixed_indices = [p[0] for p in fixed_points]
-    fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
-    mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-    ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
+    if fixed_points:
+        fixed_indices = [p[0] for p in fixed_points]
+        fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
+        mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+        ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
     # patch pairwise distances and indices of each pairs together
     if isinstance(p_dists[0], float):
@@ -194,9 +196,11 @@ def pmds(
             ss_unc = jax.ops.index_add(
                 ss_unc, related_indices, -grads_ss_unc / batch_size
             )
+
             # correct gradient for fixed points
-            mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-            ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
+            if fixed_points:
+                mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+                ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
         loss = float(loss / (i + 1))
         mds_stress = (
