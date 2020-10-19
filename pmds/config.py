@@ -92,7 +92,7 @@ pre_config = {
             pca=None,
         ),
         "cities_us_toy": dict(
-            dataset_name="cities_us",
+            dataset_name="cities_us_toy",
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,

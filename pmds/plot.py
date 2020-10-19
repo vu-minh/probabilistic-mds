@@ -20,13 +20,13 @@ def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
         for (x, y), s in zip(Z, labels):
             ax.text(x, y * 1.05, s, ha="center", va="center")
     else:
-        p.update({"c": labels, "cmap": "tab10"})
+        p.update({"marker": "o", "c": labels, "cmap": "tab10"})
 
     ax.set_title(title)
     ax.scatter(*Z.T, **p)
 
     if Z_vars is not None and Z_vars.shape == (Z.shape[0],):
-        ax.scatter(*Z.T, marker="o", c=labels, s=Z_vars * 500, alpha=0.05)
+        ax.scatter(*Z.T, s=Z_vars * 500, alpha=0.05, **p)
 
     if fig is not None:
         fig.savefig(out_name, bbox_inches="tight")

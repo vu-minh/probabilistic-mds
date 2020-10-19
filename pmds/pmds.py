@@ -213,7 +213,7 @@ def pmds(
         print(
             f"[DEBUG] epoch {epoch}, loss: {loss:.2f}, stress: {mds_stress:,.2f}"
             f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
-            f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
+            # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )
 
     ss = EPSILON + jax.nn.softplus(SCALE * ss_unc)
