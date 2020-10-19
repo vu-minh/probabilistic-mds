@@ -38,7 +38,7 @@ def run_pdms(D, N, args, labels=None):
     ).fit_transform(D_squareform)
 
     # MDS with jax
-    Z2 = mds.mds(D, n_samples=N, n_components=args.n_components, lr=2e-2, n_epochs=50)
+    Z2 = mds.mds(D, n_samples=N, n_components=args.n_components, lr=5e-3, n_epochs=20)
 
     # Probabilistic MDS with jax
     Z1, Z1_vars, losses = pmds(
