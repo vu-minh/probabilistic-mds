@@ -7,7 +7,7 @@ from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
 
 from pmds.pmds import pmds
-from pmds.mds import mds
+from pmds.mds_jax import mds
 from pmds import score, plot, dataset, config
 
 
@@ -38,7 +38,14 @@ def run_pdms(D, N, args, labels=None):
     ).fit_transform(D_squareform)
 
     # MDS with jax
-    Z2 = mds(D, n_samples=N, n_components=args.n_components, lr=5e-3, n_epochs=20)
+    Z2 = mds(
+        D,
+        n_samples=N,
+        n_components=args.n_components,
+        lr=args.learning_rate_mds,
+        batch_size=args.batch_size_mds,
+        n_epochs=args.epochs_mds,
+    )
 
     # Probabilistic MDS with jax
     Z1, Z1_vars, losses = pmds(

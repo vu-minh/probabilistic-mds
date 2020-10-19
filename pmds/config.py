@@ -13,6 +13,9 @@ pre_config = {
             std=True,  # standardize
             pca=None,
             fixed_points=[],
+            epochs_mds=20,
+            learning_rate_mds=2.5,
+            batch_size_mds=2000,
         ),
         "iris_mini": dict(
             dataset_name="iris",
@@ -24,6 +27,9 @@ pre_config = {
             random_state=42,
             std=True,  # standardize
             pca=None,
+            epochs_mds=20,
+            learning_rate_mds=5,
+            batch_size_mds=100,
         ),
         "digits": dict(
             dataset_name="digits",
@@ -35,6 +41,9 @@ pre_config = {
             random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
+            epochs_mds=50,
+            learning_rate_mds=100,
+            batch_size_mds=4000,
         ),
         "digits_mini": dict(
             dataset_name="digits",
@@ -46,6 +55,9 @@ pre_config = {
             random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
+            epochs_mds=50,
+            learning_rate_mds=22,
+            batch_size_mds=500,
         ),
         "wine": dict(
             dataset_name="wine",
@@ -96,12 +108,16 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=25,
+            epochs=5,
             learning_rate=1.0,
             random_state=42,
             std=False,
             pca=None,
             # fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.8)],
+            ### params for MDS-jax
+            epochs_mds=10,
+            learning_rate_mds=10,
+            batch_size_mds=20,
         ),
         "qpcr": dict(
             dataset_name="qpcr",
@@ -113,6 +129,23 @@ pre_config = {
             random_state=42,
             std=False,
             pca=None,
+            epochs_mds=50,
+            learning_rate_mds=100,
+            batch_size_mds=5000,
+        ),
+        "qpcr_mini": dict(
+            dataset_name="qpcr",
+            n_samples=200,
+            n_components=2,
+            batch_size=0,
+            epochs=30,
+            learning_rate=250,
+            random_state=42,
+            std=False,
+            pca=None,
+            epochs_mds=50,
+            learning_rate_mds=100,
+            batch_size_mds=5000,
         ),
     }
 }
