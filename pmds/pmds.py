@@ -7,7 +7,7 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 from jax import random
-from jax.scipy.special import xlogy, i0e, i1e
+from jax.scipy.special import xlogy, gammaln, i0e, i1e
 from jax.test_util import check_grads
 
 from .utils import chunks
@@ -16,6 +16,17 @@ from .score import stress
 
 EPSILON = 1e-6
 SCALE = 1e-3
+
+
+def _x2_log_pdf(x, df=2):
+    # https://github.com/scipy/scipy/blob/v1.5.3/scipy/stats/_continuous_distns.py#L1265
+    # return (
+    #     xlogy(df / 2.0 - 1, x) - x / 2.0 - gammaln(df / 2.0) - (jnp.log(2) * df) / 2.0
+    # )
+    return -jnp.log(2.0) - gammaln(1.0) - x / 2.0
+
+
+x2_log_pdf = jax.jit(_x2_log_pdf)
 
 
 def _ncx2_log_pdf(x, df, nc):
@@ -39,20 +50,27 @@ def _ncx2_log_pdf(x, df, nc):
     # res += np.log(ive(df2, xs*ns) / 2.0)
 
     # assert jnp.all(nc > 0), "Encouting non-positive nc params of X-square dist."
-    xs, ns = jnp.sqrt(x), jnp.sqrt(nc)
+    xs, ns = jnp.sqrt(x + EPSILON), jnp.sqrt(nc + EPSILON)
     res = -jnp.log(2.0) - 0.5 * (xs - ns) ** 2
-    if df == 2:
-        res += jnp.log(i0e(xs * ns))
-    elif df == 4:
-        res += 0.5 * (jnp.log(x) - jnp.log(nc))
-        res += jnp.log(i1e(xs * ns))
-    else:
-        raise ValueError("logpdf of NonCentral X-square only support dof of 2 or 4")
+    res = res + jnp.log(i0e(xs * ns))
+    # if df == 2:
+    #     res = res + jnp.log(i0e(xs * ns))
+    # elif df == 4:
+    #     res = res + 0.5 * (jnp.log(x) - jnp.log(nc))
+    #     res = res + jnp.log(i1e(xs * ns))
+    # else:
+    #     raise ValueError("logpdf of NonCentral X-square only support dof of 2 or 4")
     return res.reshape(())
 
 
+ncx2_log_pdf = jax.jit(_ncx2_log_pdf)
+
+
 def _ncx2_pdf(x, df, nc):
-    return jnp.exp(_ncx2_log_pdf(x, df, nc))
+    return jnp.exp(ncx2_log_pdf(x, df, nc))
+
+
+ncx2_pdf = jax.jit(_ncx2_pdf)
 
 
 def pmds(
@@ -109,8 +127,8 @@ def pmds(
     # init mu and sigma square. Transform unconstrained sigma square `ss_unc` to `ss`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_s = random.split(random.PRNGKey(random_state))
-    # ss_unc = random.normal(key_s, (n_samples,))
-    ss_unc = jnp.ones((n_samples,))
+    ss_unc = random.normal(key_s, (n_samples,))
+    # ss_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
@@ -134,8 +152,9 @@ def pmds(
     # function to calculate log pdf of X-square for a single input `d` given the params.
     def loss_one_pair(mu_i, mu_j, s_i, s_j, d):
         s_ij = s_i + s_j + EPSILON  # try to avoid divided by zero
-        nc = jnp.divide(jnp.sum((mu_i - mu_j) ** 2), s_ij)
-        return -_ncx2_log_pdf(x=d, df=n_components, nc=nc)
+        nc = jnp.divide(jnp.linalg.norm(mu_i - mu_j) ** 2, s_ij)
+        # diff = 0.5 * (d - jnp.linalg.norm(mu_i / s_i - mu_j / s_j)) ** 2
+        return -ncx2_log_pdf(x=d, df=n_components, nc=nc)
 
     # prepare the log pdf function of one sample to run in batch mode
     loss_and_grads_batched = jax.jit(
@@ -174,9 +193,22 @@ def pmds(
             if jnp.any(jnp.isnan(loss_batch)):
                 raise ValueError(
                     "NaN encountered in loss value."
-                    "Check if the `nc` params of X-square dist. are non-positive"
+                    "Check if the `nc` params of X-square distribution are non-positive"
                 )
-            loss += jnp.mean(loss_batch)
+            for i, grad in enumerate(grads):
+                for j, (l, g) in enumerate(zip(loss_batch, grad)):
+                    if jnp.any(jnp.isnan(g)):
+                        print(j, l, g, dists[j], pair_indices[j])
+                        j0, j1 = pair_indices[j]
+                        print(mu_i[j0], mu_j[j0], ss_i[j0], ss_j[j1])
+                        print(
+                            loss_one_pair(
+                                mu_i[j0], mu_j[j0], ss_i[j0], ss_j[j1], dists[j]
+                            )
+                        )
+                        raise ValueError(f"Nan encountered in grads[{i}]")
+
+            loss += jnp.sum(loss_batch)
 
             # update gradient for the corresponding related indices
             grads_mu = jnp.concatenate((lr * grads[0], lr * grads[1]), axis=0)
@@ -185,7 +217,7 @@ def pmds(
             assert grads_mu.shape[0] == grads_ss.shape[0] == len(related_indices)
 
             # update gradient for mu
-            mu = jax.ops.index_add(mu, related_indices, -grads_mu / batch_size)
+            mu = jax.ops.index_add(mu, related_indices, -grads_mu)
 
             # update gradient for constrained variable ss
             # first, calculate gradient for unconstrained variable ss_unc
@@ -193,16 +225,14 @@ def pmds(
                 grads_ss * jax.nn.sigmoid(SCALE * ss_unc[related_indices]) * SCALE
             )
             # then, update the unconstrained variable ss_unc
-            ss_unc = jax.ops.index_add(
-                ss_unc, related_indices, -grads_ss_unc / batch_size
-            )
+            ss_unc = jax.ops.index_add(ss_unc, related_indices, -grads_ss_unc)
 
             # correct gradient for fixed points
             if fixed_points:
                 mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
                 ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
-        loss = float(loss / (i + 1))
+        loss = float(loss / len(p_dists))
         mds_stress = (
             stress(debug_D_squareform, mu) if debug_D_squareform is not None else 0.0
         )

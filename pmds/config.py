@@ -108,12 +108,13 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=5,
-            learning_rate=1.0,
+            epochs=20,
+            learning_rate=0.2,
             random_state=42,
             std=False,
             pca=None,
-            # fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.8)],
+            # fixed_points=[(0, 0.0, 0.0)],
+            # fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.6)],
             ### params for MDS-jax
             epochs_mds=10,
             learning_rate_mds=10,
