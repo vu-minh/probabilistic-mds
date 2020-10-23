@@ -8,7 +8,7 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=20,
-            learning_rate=1,
+            learning_rate=1e-3,
             random_state=42,
             std=True,  # standardize
             pca=None,
@@ -22,8 +22,8 @@ pre_config = {
             n_samples=40,
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=50,
+            epochs=30,
+            learning_rate=1.5,
             random_state=42,
             std=True,  # standardize
             pca=None,
@@ -50,9 +50,9 @@ pre_config = {
             n_samples=50,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=1,
-            random_state=42,
+            epochs=60,
+            learning_rate=50,
+            random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=50,
@@ -108,17 +108,17 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=25,
-            learning_rate=2.0,
-            random_state=2020,
+            epochs=50,
+            learning_rate=5.0,
+            random_state=42,
             std=False,
             pca=None,
             # fixed_points=[(0, 0.0, 0.0)],
             # fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.6)],
             fixed_points=[
-                (0, 0.825, 0.12),  # New York
+                # (0, 0.825, 0.12),  # New York
                 # (6, 0.65, 0.09),  # Olympia
-                #
+                # (0, 0.1, 0.0)
             ],
             ### params for MDS-jax
             epochs_mds=10,
@@ -153,5 +153,27 @@ pre_config = {
             learning_rate_mds=100,
             batch_size_mds=5000,
         ),
-    }
+    },
+    "MAP": {
+        "cities_us_toy": dict(
+            dataset_name="cities_us_toy",
+            n_samples=None,  # 10
+            n_components=2,
+            batch_size=0,
+            epochs=30,
+            learning_rate=3.0,
+            random_state=2020,
+            std=False,
+            pca=None,
+            fixed_points=[
+                # (0, 0.1, 0.02),  # New York
+                # (6, -1.0, 1.0),  # Olympia
+                # (5, 0.0, 0.0),  # Austin
+            ],
+            ### params for MDS-jax
+            epochs_mds=10,
+            learning_rate_mds=10,
+            batch_size_mds=20,
+        )
+    },
 }

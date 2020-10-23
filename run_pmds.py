@@ -60,6 +60,7 @@ def run_pdms(D, N, args, labels=None):
         debug_D_squareform=D_squareform,
         fixed_points=vars(args).get("fixed_points", []),
         # init_mu=Z0,
+        method=args.method_name,  # MLE or MAP
     )
     plot.line(losses, out_name=f"{plot_dir}/loss.png")
 
@@ -113,6 +114,7 @@ if __name__ == "__main__":
         # load predefined config and update the config with new input arguments
         config = config.pre_config[method_name][dataset_name]
         args = argparse.Namespace(**config)
+        args.method_name = method_name
     print("[DEBUG] input args: ", args)
 
     plot_dir = f"plots/{method_name}/{dataset_name}"

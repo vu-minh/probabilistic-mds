@@ -7,6 +7,7 @@ import numpy as np
 import jax
 import jax.numpy as jnp
 from jax import random
+from jax.scipy.stats import multivariate_normal
 from jax.scipy.special import xlogy, gammaln, i0e, i1e
 from jax.test_util import check_grads
 
@@ -16,6 +17,9 @@ from .score import stress
 
 EPSILON = 1e-6
 SCALE = 1e-3
+
+ones2 = jnp.ones((2,))
+zeros2 = jnp.zeros((2,))
 
 
 def _x2_log_pdf(x, df=2):
@@ -96,11 +100,30 @@ def loss_one_pair(mu_i, mu_j, s_i, s_j, D, n_components):
     return -log_llh
 
 
+def loss_one_pair_with_prior(mu_i, mu_j, s_i, s_j, D, n_components):
+    log_prior = 0.0
+    log_prior = log_prior + multivariate_normal.logpdf(mu_i, mean=zeros2, cov=1.0)
+    log_prior = log_prior + multivariate_normal.logpdf(mu_j, mean=zeros2, cov=1.0)
+    return loss_one_pair(mu_i, mu_j, s_i, s_j, D, n_components) - log_prior
+
+
 # prepare the log pdf function of one sample to run in batch mode
-loss_and_grads_batched = jax.jit(
+loss_and_grads_batched_MLE = jax.jit(
     jax.vmap(
         # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
         jax.value_and_grad(jax.jit(loss_one_pair), argnums=[0, 1, 2, 3]),
+        # parallel for all input params except the last one
+        in_axes=(0, 0, 0, 0, 0, None),
+        # scalar output
+        out_axes=0,
+    )
+)
+
+
+loss_and_grads_batched_MAP = jax.jit(
+    jax.vmap(
+        # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
+        jax.value_and_grad(jax.jit(loss_one_pair_with_prior), argnums=[0, 1, 2, 3]),
         # parallel for all input params except the last one
         in_axes=(0, 0, 0, 0, 0, None),
         # scalar output
@@ -120,6 +143,7 @@ def pmds(
     debug_D_squareform=None,
     fixed_points=[],
     init_mu=None,
+    method="MLE",
 ):
     """Probabilistic MDS according to Hefner model 1958.
 
@@ -163,8 +187,8 @@ def pmds(
     # init mu and sigma square. Transform unconstrained sigma square `ss_unc` to `ss`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_s = random.split(random.PRNGKey(random_state))
-    ss_unc = random.normal(key_s, (n_samples,))
-    # ss_unc = jnp.ones((n_samples,))
+    # ss_unc = random.normal(key_s, (n_samples,))
+    ss_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
@@ -185,6 +209,11 @@ def pmds(
     else:
         dists_with_indices = p_dists
 
+    loss_and_grads_batched_method = {
+        "MLE": loss_and_grads_batched_MLE,
+        "MAP": loss_and_grads_batched_MAP,
+    }[method]
+
     all_loss = []
     for epoch in range(epochs):
         loss = 0.0
@@ -202,7 +231,7 @@ def pmds(
             assert len(mu_i) <= batch_size
 
             # calculate loss and gradients in each batch
-            loss_batch, grads = loss_and_grads_batched(
+            loss_batch, grads = loss_and_grads_batched_method(
                 mu_i, mu_j, ss_i, ss_j, jnp.array(dists), n_components
             )
 
@@ -242,10 +271,10 @@ def pmds(
             # then, update the unconstrained variable ss_unc
             ss_unc = jax.ops.index_add(ss_unc, related_indices, -grads_ss_unc / len(i0))
 
-            # correct gradient for fixed points
-            if fixed_points:
-                mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-                ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
+            # # correct gradient for fixed points
+            # if fixed_points:
+            #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+            #     ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
         loss = float(loss / len(p_dists))
         mds_stress = (
