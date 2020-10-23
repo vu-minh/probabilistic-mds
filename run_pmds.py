@@ -80,7 +80,7 @@ def run_pdms(D, N, args, labels=None):
         f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, Z1_vars, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, None, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
     )
     plot.compare_scatter(
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"

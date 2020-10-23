@@ -108,7 +108,7 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=50,
+            epochs=40,
             learning_rate=5.0,
             random_state=42,
             std=False,
@@ -160,14 +160,14 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=30,
+            epochs=20,
             learning_rate=3.0,
-            random_state=2020,
+            random_state=42,
             std=False,
             pca=None,
             fixed_points=[
-                # (0, 0.1, 0.02),  # New York
-                # (6, -1.0, 1.0),  # Olympia
+                (0, -0.15, 0.1),  # New York
+                (6, 0.15, 0.1),  # Olympia
                 # (5, 0.0, 0.0),  # Austin
             ],
             ### params for MDS-jax

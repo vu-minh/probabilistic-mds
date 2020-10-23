@@ -144,6 +144,7 @@ def pmds(
     fixed_points=[],
     init_mu=None,
     method="MLE",
+    hard_fix=False,
 ):
     """Probabilistic MDS according to Hefner model 1958.
 
@@ -271,10 +272,10 @@ def pmds(
             # then, update the unconstrained variable ss_unc
             ss_unc = jax.ops.index_add(ss_unc, related_indices, -grads_ss_unc / len(i0))
 
-            # # correct gradient for fixed points
-            # if fixed_points:
-            #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-            #     ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
+            # correct gradient for fixed points
+            if fixed_points and hard_fix:
+                mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+                ss_unc = jax.ops.index_update(ss_unc, fixed_indices, EPSILON)
 
         loss = float(loss / len(p_dists))
         mds_stress = (

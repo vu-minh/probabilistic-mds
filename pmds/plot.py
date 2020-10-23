@@ -32,7 +32,7 @@ def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
         ax.scatter(*Z.T, s=Z_vars * 500, alpha=0.05, **p)
 
     if fig is not None:
-        fig.savefig(out_name, bbox_inches="tight")
+        fig.savefig(out_name, bbox_inches="tight", transparent=True)
 
 
 def compare_scatter(Z0, Z1, Z0_vars, Z1_vars, labels, titles, out_name="compare.png"):
