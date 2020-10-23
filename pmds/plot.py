@@ -12,8 +12,8 @@ def line(points, out_name="line.png"):
 
 def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 6)) if ax is None else (None, ax)
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # ax.set_xticks([])
+    # ax.set_yticks([])
 
     p = {} if Z_vars is None else {"marker": "+"}
     if labels is None:

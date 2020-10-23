@@ -17,7 +17,8 @@ def run_pdms(D, N, args, labels=None):
     assert len(D) == len(all_pairs)
 
     # PMDS use squared Euclidean distances
-    sq_dists_with_indices = list(zip(D ** 2, all_pairs))
+    # NOTE now PMDS use Euclidean distance (not squared)
+    sq_dists_with_indices = list(zip(D, all_pairs))
     n_pairs = len(sq_dists_with_indices)
 
     # create non-complete data: sample from pairwise distances

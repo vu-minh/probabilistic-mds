@@ -73,6 +73,42 @@ def _ncx2_pdf(x, df, nc):
 ncx2_pdf = jax.jit(_ncx2_pdf)
 
 
+# function to calculate log pdf of X-square for a single input `d` given the params.
+def loss_one_pair0(mu_i, mu_j, s_i, s_j, d, n_components):
+    s_ij = s_i + s_j + EPSILON  # try to avoid divided by zero
+    # make sure d_ij is not zero
+    d_ij = jnp.linalg.norm(mu_i - mu_j) + EPSILON
+    nc = jnp.divide(d_ij ** 2, s_ij)
+    factor = 2 * d / s_ij
+    return -ncx2_log_pdf(x=d * d, df=n_components, nc=nc) - jnp.log(factor)
+
+
+def loss_one_pair(mu_i, mu_j, s_i, s_j, D, n_components):
+    s_ij = s_i + s_j + EPSILON
+    d_ij = jnp.linalg.norm(mu_i - mu_j) + EPSILON
+
+    factor = D / s_ij
+    log_llh = (
+        jnp.log(factor)
+        - 0.5 * (D * D + d_ij * d_ij) / s_ij
+        + jnp.log(i0e(d_ij * factor))
+    )
+    return -log_llh
+
+
+# prepare the log pdf function of one sample to run in batch mode
+loss_and_grads_batched = jax.jit(
+    jax.vmap(
+        # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
+        jax.value_and_grad(jax.jit(loss_one_pair), argnums=[0, 1, 2, 3]),
+        # parallel for all input params except the last one
+        in_axes=(0, 0, 0, 0, 0, None),
+        # scalar output
+        out_axes=0,
+    )
+)
+
+
 def pmds(
     p_dists,
     n_samples,
@@ -149,25 +185,6 @@ def pmds(
     else:
         dists_with_indices = p_dists
 
-    # function to calculate log pdf of X-square for a single input `d` given the params.
-    def loss_one_pair(mu_i, mu_j, s_i, s_j, d):
-        s_ij = s_i + s_j + EPSILON  # try to avoid divided by zero
-        nc = jnp.divide(jnp.linalg.norm(mu_i - mu_j) ** 2, s_ij)
-        # diff = 0.5 * (d - jnp.linalg.norm(mu_i / s_i - mu_j / s_j)) ** 2
-        return -ncx2_log_pdf(x=d, df=n_components, nc=nc)
-
-    # prepare the log pdf function of one sample to run in batch mode
-    loss_and_grads_batched = jax.jit(
-        jax.vmap(
-            # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
-            jax.value_and_grad(loss_one_pair, argnums=[0, 1, 2, 3]),
-            # parallel for all input params
-            in_axes=(0, 0, 0, 0, 0),
-            # scalar output
-            out_axes=0,
-        )
-    )
-
     all_loss = []
     for epoch in range(epochs):
         loss = 0.0
@@ -185,9 +202,8 @@ def pmds(
             assert len(mu_i) <= batch_size
 
             # calculate loss and gradients in each batch
-            # TODO think about d_{ij} / (sigma^2_i + sigma^2_j) with very small sigma
             loss_batch, grads = loss_and_grads_batched(
-                mu_i, mu_j, ss_i, ss_j, jnp.array(dists)
+                mu_i, mu_j, ss_i, ss_j, jnp.array(dists), n_components
             )
 
             if jnp.any(jnp.isnan(loss_batch)):
@@ -196,17 +212,16 @@ def pmds(
                     "Check if the `nc` params of X-square distribution are non-positive"
                 )
             for i, grad in enumerate(grads):
-                for j, (l, g) in enumerate(zip(loss_batch, grad)):
-                    if jnp.any(jnp.isnan(g)):
-                        print(j, l, g, dists[j], pair_indices[j])
-                        j0, j1 = pair_indices[j]
-                        print(mu_i[j0], mu_j[j0], ss_i[j0], ss_j[j1])
-                        print(
-                            loss_one_pair(
-                                mu_i[j0], mu_j[j0], ss_i[j0], ss_j[j1], dists[j]
-                            )
-                        )
-                        raise ValueError(f"Nan encountered in grads[{i}]")
+                if jnp.any(jnp.isnan(grad)):
+                    print(grad)
+                    raise ValueError(
+                        f"Nan encountered in grads[{i}]: ",
+                        (
+                            "mu_i and mu_j are too close that make nc~0"
+                            if i < 2
+                            else "ss_i and ss_j have problem (zero values, ...)"
+                        ),
+                    )
 
             loss += jnp.sum(loss_batch)
 
@@ -217,7 +232,7 @@ def pmds(
             assert grads_mu.shape[0] == grads_ss.shape[0] == len(related_indices)
 
             # update gradient for mu
-            mu = jax.ops.index_add(mu, related_indices, -grads_mu)
+            mu = jax.ops.index_add(mu, related_indices, -grads_mu / len(i0))
 
             # update gradient for constrained variable ss
             # first, calculate gradient for unconstrained variable ss_unc
@@ -225,7 +240,7 @@ def pmds(
                 grads_ss * jax.nn.sigmoid(SCALE * ss_unc[related_indices]) * SCALE
             )
             # then, update the unconstrained variable ss_unc
-            ss_unc = jax.ops.index_add(ss_unc, related_indices, -grads_ss_unc)
+            ss_unc = jax.ops.index_add(ss_unc, related_indices, -grads_ss_unc / len(i0))
 
             # correct gradient for fixed points
             if fixed_points:
@@ -242,7 +257,7 @@ def pmds(
         mlflow.log_metric("stress", mds_stress)
         print(
             f"[DEBUG] epoch {epoch}, loss: {loss:.2f}, stress: {mds_stress:,.2f}"
-            f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
+            # f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
             # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )
 

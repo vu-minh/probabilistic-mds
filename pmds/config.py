@@ -7,14 +7,14 @@ pre_config = {
             n_samples=None,  # 150
             n_components=2,
             batch_size=0,
-            epochs=40,
-            learning_rate=150,
+            epochs=20,
+            learning_rate=1,
             random_state=42,
             std=True,  # standardize
             pca=None,
             fixed_points=[],
-            epochs_mds=20,
-            learning_rate_mds=2.5,
+            epochs_mds=2,
+            learning_rate_mds=10,
             batch_size_mds=2000,
         ),
         "iris_mini": dict(
@@ -36,13 +36,13 @@ pre_config = {
             n_samples=150,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=75,
-            learning_rate=150,
+            epochs=25,
+            learning_rate=160,
             random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
-            epochs_mds=50,
-            learning_rate_mds=100,
+            epochs_mds=20,
+            learning_rate_mds=140,
             batch_size_mds=4000,
         ),
         "digits_mini": dict(
@@ -108,13 +108,18 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=0.2,
-            random_state=42,
+            epochs=25,
+            learning_rate=2.0,
+            random_state=2020,
             std=False,
             pca=None,
             # fixed_points=[(0, 0.0, 0.0)],
             # fixed_points=[(6, 0.0, 0.0), (0, 0.5, -0.1), (5, 0.25, -0.6)],
+            fixed_points=[
+                (0, 0.825, 0.12),  # New York
+                # (6, 0.65, 0.09),  # Olympia
+                #
+            ],
             ### params for MDS-jax
             epochs_mds=10,
             learning_rate_mds=10,
