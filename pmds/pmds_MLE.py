@@ -1,6 +1,5 @@
 # Simple probabilistic MDS with jax
 from itertools import combinations
-import math
 import mlflow
 import numpy as np
 
@@ -8,8 +7,9 @@ import jax
 import jax.numpy as jnp
 from jax import random
 from jax.scipy.stats import multivariate_normal
-from jax.scipy.special import xlogy, gammaln, i0e, i1e
-from jax.test_util import check_grads
+from jax.scipy.special import gammaln, i0e  # , i1e, xlogy
+
+# from jax.test_util import check_grads
 
 from .utils import chunks
 from .score import stress
@@ -132,7 +132,7 @@ loss_and_grads_batched_MAP = jax.jit(
 )
 
 
-def pmds(
+def pmds_MLE(
     p_dists,
     n_samples,
     n_components=2,
@@ -143,7 +143,6 @@ def pmds(
     debug_D_squareform=None,
     fixed_points=[],
     init_mu=None,
-    method="MLE",
     hard_fix=False,
 ):
     """Probabilistic MDS according to Hefner model 1958.
@@ -210,11 +209,6 @@ def pmds(
     else:
         dists_with_indices = p_dists
 
-    loss_and_grads_batched_method = {
-        "MLE": loss_and_grads_batched_MLE,
-        "MAP": loss_and_grads_batched_MAP,
-    }[method]
-
     all_loss = []
     for epoch in range(epochs):
         loss = 0.0
@@ -232,7 +226,7 @@ def pmds(
             assert len(mu_i) <= batch_size
 
             # calculate loss and gradients in each batch
-            loss_batch, grads = loss_and_grads_batched_method(
+            loss_batch, grads = loss_and_grads_batched_MLE(
                 mu_i, mu_j, ss_i, ss_j, jnp.array(dists), n_components
             )
 

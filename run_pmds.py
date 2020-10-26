@@ -6,7 +6,8 @@ import mlflow
 from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
 
-from pmds.pmds import pmds
+from pmds.pmds_MLE import pmds_MLE
+from pmds.pmds_MAP import pmds_MAP
 from pmds.mds_jax import mds
 from pmds import score, plot, dataset, config
 
@@ -49,7 +50,8 @@ def run_pdms(D, N, args, labels=None):
     )
 
     # Probabilistic MDS with jax
-    Z1, Z1_vars, losses = pmds(
+    pmds_method = {"MLE": pmds_MLE, "MAP": pmds_MAP}[args.method_name]
+    Z1, Z1_vars, losses = pmds_method(
         p_dists,
         n_samples=N,
         n_components=args.n_components,
@@ -60,7 +62,6 @@ def run_pdms(D, N, args, labels=None):
         debug_D_squareform=D_squareform,
         fixed_points=vars(args).get("fixed_points", []),
         # init_mu=Z0,
-        method=args.method_name,  # MLE or MAP
     )
     plot.line(losses, out_name=f"{plot_dir}/loss.png")
 
@@ -69,9 +70,10 @@ def run_pdms(D, N, args, labels=None):
     s1 = score.stress(D_squareform, Z1)
     s2 = score.stress(D_squareform, Z2)
     print(
-        f"Stress scores Original MDS: {s0:,.2f} \n"
-        f"              PMDS:         {s1:,.2f}, diff1 = {s1 - s0:,.2f}\n"
-        f"              MDS-jax:      {s2:,.2f}, diff2 = {s2 - s0:,.2f}"
+        "Stress scores:\n"
+        f"Original MDS: {s0:,.2f} \n"
+        f"MDS-jax     : {s2:,.2f}, diff2 = {s2 - s0:,.2f}\n"
+        f"PMDS-{args.method_name:<7}: {s1:,.2f}, diff1 = {s1 - s0:,.2f}\n"
     )
 
     titles = [
