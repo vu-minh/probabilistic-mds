@@ -155,26 +155,83 @@ pre_config = {
         ),
     },
     "MAP": {
+        # NOTE: DO NOT use batch_size for MAP
         "cities_us_toy": dict(
             dataset_name="cities_us_toy",
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
             epochs=40,
-            learning_rate=2e-2,
+            learning_rate=1e-1,
             random_state=42,
             std=False,
             pca=None,
             fixed_points=[
-                # (6, 0.1, 0.1),
-                # (0, -0.15, 0.1),  # New York
-                # (6, 0.15, 0.1),  # Olympia
+                (0, -0.2, -0.2),  # New York
+                (6, 0.2, 0.2),  # Olympia
                 # (5, 0.0, 0.0),  # Austin
             ],
             ### params for MDS-jax
             epochs_mds=10,
             learning_rate_mds=10,
             batch_size_mds=20,
-        )
+        ),
+        "iris": dict(
+            dataset_name="iris",
+            n_samples=None,  # 150
+            n_components=2,
+            batch_size=0,
+            epochs=20,
+            learning_rate=1e-5,
+            random_state=42,
+            std=True,  # standardize
+            pca=None,
+            fixed_points=[],
+            epochs_mds=10,
+            learning_rate_mds=10,
+            batch_size_mds=2000,
+        ),
+        "iris_mini": dict(
+            dataset_name="iris",
+            n_samples=40,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-3,
+            random_state=42,
+            std=True,  # standardize
+            pca=None,
+            epochs_mds=20,
+            learning_rate_mds=5,
+            batch_size_mds=100,
+        ),
+        "digits": dict(
+            dataset_name="digits",
+            n_samples=150,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=25,
+            learning_rate=160,
+            random_state=42,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            epochs_mds=20,
+            learning_rate_mds=140,
+            batch_size_mds=4000,
+        ),
+        "digits_mini": dict(
+            dataset_name="digits",
+            n_samples=50,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=60,
+            learning_rate=1e-3,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            epochs_mds=20,
+            learning_rate_mds=22,
+            batch_size_mds=500,
+        ),
     },
 }

@@ -46,11 +46,11 @@ def loss_one_pair(mu_i, mu_j, s_i, s_j, D, n_components):
     s_ij = s_i + s_j + EPSILON
     d_ij = jnp.linalg.norm(mu_i - mu_j) + EPSILON
 
-    factor = D / s_ij
     log_llh = (
-        jnp.log(factor)
+        jnp.log(D)
+        - jnp.log(s_ij)
         - 0.5 * (D * D + d_ij * d_ij) / s_ij
-        + jnp.log(i0e(d_ij * factor))
+        + jnp.log(i0e(d_ij * D / s_ij))
     )
     return -log_llh
 
@@ -188,7 +188,9 @@ def pmds_MAP(
         loss_log_mu, grads_log_mu = loss_and_grads_log_mu(mu)
 
         # accumulate log likelihood and log prior
-        loss = jnp.sum(loss_lllh) - jnp.sum(loss_log_mu)
+        loss = jnp.sum(loss_lllh) + jnp.sum(loss_log_mu)
+
+        # print("[DEBUG]: NAN here?", jnp.mean(loss_lllh), jnp.mean(loss_log_mu))
 
         # update gradient for the corresponding related indices
         grads_mu = jnp.concatenate((lr * grads_lllh[0], lr * grads_lllh[1]), axis=0)

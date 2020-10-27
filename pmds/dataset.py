@@ -11,11 +11,21 @@ from scipy.spatial.distance import pdist, squareform
 DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
 
 
-def load_dataset(dataset_name, data_dir="./data", std=False, pca=None, n_samples=None):
+def load_dataset(
+    dataset_name,
+    data_dir="./data",
+    std=False,
+    pca=None,
+    n_samples=None,
+    normalize_dists=False,
+):
     if dataset_name in DISTANCE_DATASET:
-        return load_distance_dataset(dataset_name, data_dir)
+        dists, labels, N = load_distance_dataset(dataset_name, data_dir)
     else:
-        return load_traditional_dataset(dataset_name, std, pca, n_samples)
+        dists, labels, N = load_traditional_dataset(dataset_name, std, pca, n_samples)
+    if normalize_dists:
+        dists /= dists.max()
+    return dists, labels, N
 
 
 def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):

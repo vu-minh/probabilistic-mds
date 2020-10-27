@@ -19,12 +19,12 @@ def run_pdms(D, N, args, labels=None):
 
     # PMDS use squared Euclidean distances
     # NOTE now PMDS use Euclidean distance (not squared)
-    sq_dists_with_indices = list(zip(D, all_pairs))
-    n_pairs = len(sq_dists_with_indices)
+    dists_with_indices = list(zip(D, all_pairs))
+    n_pairs = len(dists_with_indices)
 
     # create non-complete data: sample from pairwise distances
     percent = 1.0
-    p_dists = random.sample(sq_dists_with_indices, k=int(percent * n_pairs))
+    p_dists = random.sample(dists_with_indices, k=int(percent * n_pairs))
     print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(p_dists)}")
 
     # note: Original metric MDS (and its stress) use Euclidean distances,
@@ -98,6 +98,7 @@ if __name__ == "__main__":
 
     argm("--dataset_name", "-d")
     argm("--method_name", "-m", default="MLE", help="How to optimize the model")
+    argm("--normalize_dists", action="store_true", help="Normalize input distances")
     argm("--use_pre_config", "-c", action="store_true", help="Use params pre-config")
     argm("--random_state", "-s", default=2020, type=int, help="Random seed")
     argm("--pca", type=float, help="Run PCA on raw data")
@@ -111,6 +112,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     dataset_name = args.dataset_name
     method_name = args.method_name
+    normalize_dists = args.normalize_dists
 
     if args.use_pre_config:
         # load predefined config and update the config with new input arguments
@@ -130,6 +132,7 @@ if __name__ == "__main__":
         std=args.std,
         pca=args.pca,
         n_samples=args.n_samples,
+        normalize_dists=normalize_dists,
     )
 
     mlflow.set_experiment(f"pmds_{method_name}")
