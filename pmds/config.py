@@ -167,9 +167,14 @@ pre_config = {
             std=False,
             pca=None,
             fixed_points=[
-                (0, -0.2, -0.2),  # New York
-                (6, 0.2, 0.2),  # Olympia
-                # (5, 0.0, 0.0),  # Austin
+                # (0, 0.3, 0.0),  # New York
+                # (6, -0.2, 0.1),  # Olympia
+                # (0, -0.2, -0.2),
+                # (6, 0.3, 0.2),
+                (0, -0.2, -0.15),
+                (2, 0.3, 0.2),  # Los-Angles
+                (4, -0.2, 0.1),  # Miami
+                # (5, 0.055555, 0.1),
             ],
             ### params for MDS-jax
             epochs_mds=10,
