@@ -212,16 +212,16 @@ pre_config = {
         ),
         "digits": dict(
             dataset_name="digits",
-            n_samples=150,  # 1797
+            n_samples=100,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=25,
-            learning_rate=160,
+            epochs=30,
+            learning_rate=1e-2,
             random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=20,
-            learning_rate_mds=140,
+            # learning_rate_mds=140,
             batch_size_mds=4000,
         ),
         "digits_mini": dict(
@@ -229,14 +229,64 @@ pre_config = {
             n_samples=50,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=60,
-            learning_rate=1e-3,
+            epochs=30,
+            learning_rate=1e-2,
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=20,
-            learning_rate_mds=22,
+            # learning_rate_mds=22,
             batch_size_mds=500,
         ),
+        "wine": dict(
+            dataset_name="wine",
+            n_samples=None,  # use all 178 data points
+            n_components=2,
+            batch_size=0,
+            epochs=40,
+            learning_rate=1e-3,
+            random_state=42,
+            std=True,
+            pca=None,
+        ),
+        "wine_mini": dict(
+            dataset_name="wine",
+            n_samples=40,  # use all 178 data points
+            n_components=2,
+            batch_size=0,
+            epochs=20,
+            learning_rate=1e-2,
+            random_state=42,
+            std=True,
+            pca=None,
+        ),
+    },
+    "MAP2": {
+        # NOTE: DO NOT use batch_size for MAP
+        "cities_us_toy": dict(
+            dataset_name="cities_us_toy",
+            n_samples=None,  # 10
+            n_components=2,
+            batch_size=0,
+            epochs=40,
+            learning_rate=1e-1,
+            random_state=42,
+            std=False,
+            pca=None,
+            fixed_points=[
+                # (0, 0.3, 0.0),  # New York
+                # (6, -0.2, 0.1),  # Olympia
+                # (0, -0.2, -0.2),
+                # (6, 0.3, 0.2),
+                (0, -0.2, -0.15),
+                (2, 0.3, 0.2),  # Los-Angles
+                (4, -0.2, 0.1),  # Miami
+                # (5, 0.055555, 0.1),
+            ],
+            ### params for MDS-jax
+            epochs_mds=10,
+            learning_rate_mds=10,
+            batch_size_mds=20,
+        )
     },
 }

@@ -39,18 +39,21 @@ def run_pdms(D, N, args, labels=None):
         verbose=1,
     ).fit_transform(D_squareform)
 
-    # MDS with jax
-    Z2 = mds(
-        D,
-        n_samples=N,
-        n_components=args.n_components,
-        lr=args.learning_rate_mds,
-        batch_size=args.batch_size_mds,
-        n_epochs=args.epochs_mds,
-    )
+    if "learning_rate_mds" in args:
+        # MDS with jax
+        Z2 = mds(
+            D,
+            n_samples=N,
+            n_components=args.n_components,
+            lr=args.learning_rate_mds,
+            batch_size=args.batch_size_mds,
+            n_epochs=args.epochs_mds,
+        )
+    else:
+        Z2 = Z0
 
     # Probabilistic MDS with jax
-    pmds_method = {"MLE": pmds_MLE, "MAP": pmds_MAP}[args.method_name]
+    pmds_method = {"MLE": pmds_MLE, "MAP": pmds_MAP, "MAP2": pmds_MAP}[args.method_name]
     Z1, Z1_vars, losses = pmds_method(
         p_dists,
         n_samples=N,
