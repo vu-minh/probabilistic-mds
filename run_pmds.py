@@ -8,6 +8,7 @@ from scipy.spatial.distance import squareform
 
 from pmds.pmds_MLE import pmds_MLE
 from pmds.pmds_MAP import pmds_MAP
+from pmds.lv_pmds import lv_pmds
 from pmds.mds_jax import mds
 from pmds import score, plot, dataset, config
 
@@ -53,7 +54,11 @@ def run_pdms(D, N, args, labels=None):
         Z2 = Z0
 
     # Probabilistic MDS with jax
-    pmds_method = {"MLE": pmds_MLE, "MAP": pmds_MAP, "MAP2": pmds_MAP}[args.method_name]
+    pmds_method = {
+        "MLE": pmds_MLE,  # simple maximum likelihood
+        "MAP": pmds_MAP,  # simple gaussian prior for mu and uniform for sigma square
+        "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
+    }[args.method_name]
     Z1, Z1_vars, losses = pmds_method(
         p_dists,
         n_samples=N,
@@ -130,7 +135,7 @@ if __name__ == "__main__":
 
     # load pairwise Euclidean distances
     D, labels, N = dataset.load_dataset(
-        args.dataset_name,
+        dataset_name,
         data_dir="./data",
         std=args.std,
         pca=args.pca,

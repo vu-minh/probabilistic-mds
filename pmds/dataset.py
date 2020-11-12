@@ -1,5 +1,6 @@
 import os
 import joblib
+from functools import partial
 import numpy as np
 from sklearn import datasets
 from sklearn.utils import shuffle
@@ -33,6 +34,7 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
         "iris": datasets.load_iris,
         "wine": datasets.load_wine,
         "digits": datasets.load_digits,
+        "digits012": partial(datasets.load_digits, n_class=3),
         "breast_cancer": datasets.load_breast_cancer,
         "cities_us": load_cities_us,
     }[dataset_name]
@@ -97,6 +99,6 @@ def load_qpcr(data_dir="./data"):
 
 
 if __name__ == "__main__":
-    # D, labels, N = load_dataset("cities_us", data_dir="./data")
-    D, labels, N = load_qpcr(data_dir="./data")
+    D, labels, N = load_dataset("digits012", data_dir="./data")
+    # D, labels, N = load_qpcr(data_dir="./data")
     print(labels.shape, D.shape)
