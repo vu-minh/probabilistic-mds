@@ -304,13 +304,13 @@ pre_config = {
             n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=1e-2,
-            random_state=42,
+            epochs=100,
+            learning_rate=2e-2,
+            random_state=33,
             std=False,  # digits already in [0, 1]
             pca=None,
-            epochs_mds=20,
-            # learning_rate_mds=22,
+            epochs_mds=10,
+            learning_rate_mds=20,
             batch_size_mds=500,
         ),
         "iris": dict(

@@ -1,17 +1,16 @@
 # Latent variable Probabilistic MDS
 
-from itertools import combinations
 import random
-import mlflow
-import numpy as np
+from itertools import combinations
 
 import jax
 import jax.numpy as jnp
-from jax.scipy.stats import multivariate_normal, gamma
+import mlflow
+import numpy as np
 from jax.scipy.special import i0e  # xlogy, gammaln, i0e, i1e
+from jax.scipy.stats import gamma, multivariate_normal
 
 from .score import stress
-
 
 EPSILON = 1e-6
 SCALE = 1e-3
@@ -48,7 +47,7 @@ loss_and_grads_log_llh = jax.jit(
 )
 
 
-def log_prior(mu, tau, mu0=0.0, beta=1.0, a=1.0, b=0.5):
+def log_prior(mu, tau, mu0=0.0, beta=10.0, a=1.0, b=0.5):
     log_mu = multivariate_normal.logpdf(mu, mean=mu0, cov=(1.0 / (beta * tau)) * ones2)
     log_tau = gamma.logpdf(tau, a=a, scale=1.0 / b)
     return jnp.sum(log_mu) + log_tau
@@ -61,7 +60,6 @@ loss_and_grads_log_prior = jax.jit(
         out_axes=0,
     )
 )
-# loss_and_grads_log_prior = jax.value_and_grad(log_prior, argnums=[0, 1])
 
 
 def lv_pmds(
@@ -76,7 +74,7 @@ def lv_pmds(
     fixed_points=[],
     init_mu=None,
     hard_fix=False,
-    method="MAP",
+    method="LV",
 ):
     assert n_components in [2, 4]
 
@@ -84,7 +82,7 @@ def lv_pmds(
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
     # tau = jax.abs(jax.random.normal(key_tau, (n_samples,)))
-    tau_unc = 0.5 * jnp.ones((n_samples,))
+    tau_unc = 1e-1 * jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
