@@ -5,6 +5,7 @@ from itertools import combinations
 
 import jax
 import jax.numpy as jnp
+from jax.numpy.lax_numpy import zeros
 import mlflow
 import numpy as np
 from jax.scipy.special import i0e  # xlogy, gammaln, i0e, i1e
@@ -47,16 +48,18 @@ loss_and_grads_log_llh = jax.jit(
 )
 
 
-def log_prior(mu, tau, mu0=0.0, beta=10.0, a=1.0, b=0.5):
-    log_mu = multivariate_normal.logpdf(mu, mean=mu0, cov=(1.0 / (beta * tau)) * ones2)
+def log_prior(mu, tau, mu0=0.0, beta=10.0, a=0.1, b=1.0):
+    log_mu = multivariate_normal.logpdf(
+        mu, mean=mu0, cov=(1.0 / (beta * tau)) * jnp.eye(2)
+    )
     log_tau = gamma.logpdf(tau, a=a, scale=1.0 / b)
-    return jnp.sum(log_mu) + log_tau
+    return log_mu.sum() + log_tau
 
 
 loss_and_grads_log_prior = jax.jit(
     jax.vmap(
         jax.value_and_grad(jax.jit(log_prior), argnums=[0, 1]),
-        in_axes=(0, 0),
+        in_axes=(0, 0, None, None, None, None),
         out_axes=0,
     )
 )
@@ -75,6 +78,9 @@ def lv_pmds(
     init_mu=None,
     hard_fix=False,
     method="LV",
+    beta=500.0,
+    a=0.1,
+    b=1.0,
 ):
     assert n_components in [2, 4]
 
@@ -82,11 +88,12 @@ def lv_pmds(
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
     # tau = jax.abs(jax.random.normal(key_tau, (n_samples,)))
-    tau_unc = 1e-1 * jnp.ones((n_samples,))
+    tau_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
+    mu0 = jnp.array([10.0, -20.0])
 
     # fixed points
     if fixed_points:
@@ -125,7 +132,9 @@ def lv_pmds(
         )
 
         # calculate loss and gradients of prior term
-        loss_log_prior, grads_log_prior = loss_and_grads_log_prior(mu, tau)
+        loss_log_prior, grads_log_prior = loss_and_grads_log_prior(
+            mu, tau, mu0, beta, a, b
+        )
 
         # accumulate log likelihood and log prior
         loss = jnp.sum(loss_lllh) + jnp.sum(loss_log_prior)
@@ -171,7 +180,7 @@ def lv_pmds(
         # mlflow.log_metric("loss", loss)
         # mlflow.log_metric("stress", mds_stress)
         print(
-            f"[DEBUG] epoch {epoch}, loss: {-loss:.2f}, stress: {mds_stress:,.2f}"
+            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}"
             # f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
             # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )
