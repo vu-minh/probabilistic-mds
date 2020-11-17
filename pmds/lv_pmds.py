@@ -78,13 +78,13 @@ def lv_pmds(
     init_mu=None,
     hard_fix=False,
     method="LV",
-    beta=500.0,
+    beta=10.0,
     gamma_shape=1.0,
     gamma_rate=1.0,
 ):
     assert n_components in [2, 4]
 
-    # init mu and sigma square. Transform unconstrained sigma square `ss_unc` to `ss`.
+    # init `mu` and `tau`. Transform unconstrained tau `tau_unc` to  constrained`tau`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
     # tau = jax.abs(jax.random.normal(key_tau, (n_samples,)))
@@ -93,7 +93,7 @@ def lv_pmds(
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
-    mu0 = jnp.array([0.0, 0.0])
+    mu0 = jnp.array([1.0, -1.0])
 
     # fixed points
     if fixed_points:
@@ -120,8 +120,7 @@ def lv_pmds(
         batch = random.sample(dists_with_indices, k=len(p_dists))
         # unpatch pairwise distances and indices of points in each pair
         dists, pair_indices = list(zip(*batch))
-        i0, i1 = list(zip(*pair_indices))
-        i0, i1 = list(i0), list(i1)
+        i0, i1 = map(list, zip(*pair_indices))
 
         # we work with constrainted `tau` (tau > 0)
         tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
@@ -188,7 +187,7 @@ def lv_pmds(
         # mlflow.log_metric("loss", loss)
         # mlflow.log_metric("stress", mds_stress)
         print(
-            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}"
+            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}, tau: {float(jnp.mean(tau)):.1f}"
             # f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
             # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )

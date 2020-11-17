@@ -39,7 +39,7 @@ def plot_debug_Z(all_Z, labels=None, out_name="Zdebug.png", magnitude_factor=1.0
         ax.scatter(*Z0["Z"].T, c=labels, alpha=0.5)
 
         # plot arrow for the direction of movement
-        arrowprops = (dict(arrowstyle="->", alpha=0.1),)
+        arrowprops = dict(arrowstyle="->", alpha=0.1)
         for [x0, y0], [x1, y1] in zip(Z0["Z"], Z1["Z"]):
             ax.annotate("", xy=(x1, y1), xytext=(x0, y0), arrowprops=arrowprops)
 
