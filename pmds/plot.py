@@ -10,6 +10,43 @@ def line(points, out_name="line.png"):
     mlflow.log_artifact(out_name)
 
 
+def plot_losses(all_losses, titles=[], out_name="loss.png"):
+    """
+    Plot losses: total loss, log likelihood and log prior
+    """
+    fig, axes = plt.subplots(3, 1, figsize=(6, 6))
+    colors = [f"C{i+1}" for i in range(len(all_losses))]
+    for ax, loss, title, color in zip(axes, all_losses, titles, colors):
+        ax.plot(loss, c=color)
+        ax.set_title(title)
+    fig.tight_layout(pad=0.3)
+    fig.savefig(out_name)
+
+
+def plot_debug_Z(all_Z, labels=None, out_name="Zdebug.png", magnitude_factor=1.0):
+    """Debug the evolution of the embedding in `all_Z`: [{'epoch': epoch, 'Z': Z}]
+    Plot the direction of gradient from `Z_{i}` -> `Z_{i+1}`
+    """
+    n_plots = len(all_Z) - 1
+    n_cols = 5
+    n_rows = int(n_plots / n_cols + 0.5)
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 5 * n_rows))
+    for i, (Z0, Z1) in enumerate(zip(all_Z[:-1], all_Z[1:])):
+        ax = axes.ravel()[i]
+
+        ax.set_title(f"Epoch {Z0['epoch']} --> {Z1['epoch']}")
+        ax.scatter(*Z0["Z"].T, c=labels, alpha=0.5)
+
+        # plot arrow for the direction of movement
+        arrowprops = (dict(arrowstyle="->", alpha=0.1),)
+        for [x0, y0], [x1, y1] in zip(Z0["Z"], Z1["Z"]):
+            ax.annotate("", xy=(x1, y1), xytext=(x0, y0), arrowprops=arrowprops)
+
+    fig.tight_layout()
+    fig.savefig(out_name)
+
+
 def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 6)) if ax is None else (None, ax)
     # ax.set_xticks([])
@@ -22,7 +59,7 @@ def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
         for (x, y), s in zip(Z, labels):
             ax.text(x, y, s, ha="center", va="center")
     else:
-        p.update({"marker": "o", "c": labels, "cmap": "tab10"})
+        p.update({"marker": "o", "c": labels})
 
     ax.set_title(title)
     ax.scatter(*Z.T, **p)

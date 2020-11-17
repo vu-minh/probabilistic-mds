@@ -59,7 +59,7 @@ def run_pdms(D, N, args, labels=None):
         "MAP": pmds_MAP,  # simple gaussian prior for mu and uniform for sigma square
         "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
     }[args.method_name]
-    Z1, Z1_vars, losses = pmds_method(
+    Z1, Z1_vars, all_losses, all_mu = pmds_method(
         p_dists,
         n_samples=N,
         n_components=args.n_components,
@@ -71,7 +71,14 @@ def run_pdms(D, N, args, labels=None):
         fixed_points=vars(args).get("fixed_points", []),
         # init_mu=Z0,
     )
-    plot.line(losses, out_name=f"{plot_dir}/loss.png")
+
+    plot.plot_losses(
+        all_losses,
+        titles=["Total loss", "log_llh", "log_prior"],
+        out_name=f"{plot_dir}/loss.png",
+    )
+
+    plot.plot_debug_Z(all_mu, labels=labels, out_name=f"{plot_dir}/Zdebug.png")
 
     # compare stress of 2 embedding
     s0 = score.stress(D_squareform, Z0)

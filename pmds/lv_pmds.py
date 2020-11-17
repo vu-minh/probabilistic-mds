@@ -48,11 +48,11 @@ loss_and_grads_log_llh = jax.jit(
 )
 
 
-def log_prior(mu, tau, mu0=0.0, beta=10.0, a=0.1, b=1.0):
+def log_prior(mu, tau, mu0=0.0, beta=10.0, gamma_shape=1.0, gamma_rate=1.0):
     log_mu = multivariate_normal.logpdf(
         mu, mean=mu0, cov=(1.0 / (beta * tau)) * jnp.eye(2)
     )
-    log_tau = gamma.logpdf(tau, a=a, scale=1.0 / b)
+    log_tau = gamma.logpdf(tau, a=gamma_shape, scale=1.0 / gamma_rate)
     return log_mu.sum() + log_tau
 
 
@@ -79,8 +79,8 @@ def lv_pmds(
     hard_fix=False,
     method="LV",
     beta=500.0,
-    a=0.1,
-    b=1.0,
+    gamma_shape=1.0,
+    gamma_rate=1.0,
 ):
     assert n_components in [2, 4]
 
@@ -93,7 +93,7 @@ def lv_pmds(
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
-    mu0 = jnp.array([10.0, -20.0])
+    mu0 = jnp.array([0.0, 0.0])
 
     # fixed points
     if fixed_points:
@@ -111,6 +111,10 @@ def lv_pmds(
         dists_with_indices = p_dists
 
     all_loss = []
+    all_log_llh = []
+    all_log_prior = []
+    all_mu = []
+
     for epoch in range(epochs):
         # shuffle the observed pairs in each epoch
         batch = random.sample(dists_with_indices, k=len(p_dists))
@@ -133,11 +137,16 @@ def lv_pmds(
 
         # calculate loss and gradients of prior term
         loss_log_prior, grads_log_prior = loss_and_grads_log_prior(
-            mu, tau, mu0, beta, a, b
+            mu, tau, mu0, beta, gamma_shape, gamma_rate
         )
 
         # accumulate log likelihood and log prior
-        loss = jnp.sum(loss_lllh) + jnp.sum(loss_log_prior)
+        loss0 = float(jnp.sum(loss_lllh))
+        loss1 = float(jnp.sum(loss_log_prior))
+        loss = loss0 + loss1
+        all_loss.append(loss)
+        all_log_llh.append(loss0)
+        all_log_prior.append(loss1)
 
         # update gradient for the corresponding related indices
         # note: maximize log llh (or MAP) --> use param += lr * grad (not -lr * grad)
@@ -175,7 +184,6 @@ def lv_pmds(
         mds_stress = (
             stress(debug_D_squareform, mu) if debug_D_squareform is not None else 0.0
         )
-        all_loss.append(loss)
 
         # mlflow.log_metric("loss", loss)
         # mlflow.log_metric("stress", mds_stress)
@@ -185,5 +193,8 @@ def lv_pmds(
             # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )
 
+        # if epoch in [1, 2, 3, 8, epochs - 8, epochs - 3, epochs - 1]:
+        all_mu.append({"epoch": epoch, "Z": mu})
+
     tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
-    return mu, tau, all_loss
+    return mu, tau, [all_loss, all_log_llh, all_log_prior], all_mu
