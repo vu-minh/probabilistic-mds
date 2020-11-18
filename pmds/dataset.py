@@ -19,6 +19,7 @@ def load_dataset(
     pca=None,
     n_samples=None,
     normalize_dists=False,
+    missing_pairs=0.0,
 ):
     if dataset_name in DISTANCE_DATASET:
         dists, labels, N = load_distance_dataset(dataset_name, data_dir)
@@ -26,6 +27,9 @@ def load_dataset(
         dists, labels, N = load_traditional_dataset(dataset_name, std, pca, n_samples)
     if normalize_dists:
         dists /= dists.max()
+    if 0.0 < missing_pairs < 1.0:
+        n_used = int(len(dists) * (1.0 - missing_pairs))
+        dists = np.random.choice(dists, size=n_used, replace=False)
     return dists, labels, N
 
 
@@ -49,8 +53,7 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
     if pca:
         X = PCA(pca).fit_transform(X)
         print("[Dataset] After PCA: ", X.shape)
-
-    return (pdist(X, "euclidean"), labels, len(X))
+    return pdist(X, "euclidean"), labels, len(X)
 
 
 def load_distance_dataset(dataset_name, data_dir):
@@ -99,6 +102,6 @@ def load_qpcr(data_dir="./data"):
 
 
 if __name__ == "__main__":
-    D, labels, N = load_dataset("digits012", data_dir="./data")
+    D, labels, N = load_dataset("digits012", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
     print(labels.shape, D.shape)

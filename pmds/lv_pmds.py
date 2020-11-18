@@ -1,5 +1,5 @@
 # Latent variable Probabilistic MDS
-
+from time import time
 import random
 from itertools import combinations
 
@@ -13,10 +13,14 @@ from jax.scipy.stats import gamma, multivariate_normal
 
 from .score import stress
 
+
+DISABLE_JIT = False
 EPSILON = 1e-6
 SCALE = 1e-3
 FIXED_RATE = 1.0 / 1e-3
 
+if DISABLE_JIT:
+    jax.jit = lambda x: x
 ones2 = jnp.ones((2,))
 zeros2 = jnp.zeros((2,))
 
@@ -93,7 +97,7 @@ def lv_pmds(
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
-    mu0 = jnp.array([1.0, -1.0])
+    mu0 = jnp.array([0.0, 0.0])
 
     # fixed points
     if fixed_points:
@@ -110,12 +114,16 @@ def lv_pmds(
     else:
         dists_with_indices = p_dists
 
+    total_time = 0
+    loss = 0.0
     all_loss = []
     all_log_llh = []
     all_log_prior = []
     all_mu = []
 
     for epoch in range(epochs):
+        tic = time()
+
         # shuffle the observed pairs in each epoch
         batch = random.sample(dists_with_indices, k=len(p_dists))
         # unpatch pairwise distances and indices of points in each pair
@@ -187,13 +195,17 @@ def lv_pmds(
         # mlflow.log_metric("loss", loss)
         # mlflow.log_metric("stress", mds_stress)
         print(
-            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}, tau: {float(jnp.mean(tau)):.1f}"
+            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}, "
+            f"tau: {float(jnp.mean(tau)):.1f}, in {(time() - tic):.2f}s"
             # f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
             # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
         )
 
         # if epoch in [1, 2, 3, 8, epochs - 8, epochs - 3, epochs - 1]:
         all_mu.append({"epoch": epoch, "Z": mu})
+        total_time += time() - tic
 
     tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
+
+    print(f"DONE: final loss: {loss:,.0f}, {epochs} epochs in {total_time:.2f}s")
     return mu, tau, [all_loss, all_log_llh, all_log_prior], all_mu

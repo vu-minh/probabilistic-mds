@@ -268,14 +268,15 @@ pre_config = {
             n_samples=None,  # 10
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=2e-1,
+            epochs=200,  # test slow learning, ok with (20, 2e-1)
+            learning_rate=5e-3,
+            # missing_pairs=0.1,
             random_state=42,
             std=False,
             pca=None,
             fixed_points=[
                 # (0, 0.2, 0.0),  # New York
-                (6, -0.3, 0.1),  # Olympia
+                # (6, -0.3, 0.1),  # Olympia
                 # # (0, -0.2, -0.2),
                 # # (6, 0.3, 0.2),
                 # # (5, 0.055555, 0.1),
@@ -304,9 +305,10 @@ pre_config = {
             n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=25,
-            learning_rate=3e-3,
-            random_state=42,
+            epochs=50,
+            learning_rate=1e-3,
+            # missing_pairs=0.5,
+            random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=10,

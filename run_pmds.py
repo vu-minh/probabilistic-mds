@@ -24,9 +24,10 @@ def run_pdms(D, N, args, labels=None):
     n_pairs = len(dists_with_indices)
 
     # create non-complete data: sample from pairwise distances
-    percent = 1.0
-    p_dists = random.sample(dists_with_indices, k=int(percent * n_pairs))
-    print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(p_dists)}")
+    if 0.0 < args.missing_pairs < 1.0:
+        n_used = int((1.0 - args.missing_pairs) * n_pairs)
+        dists_with_indices = random.sample(dists_with_indices, k=n_used)
+        print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(dists_with_indices)}")
 
     # note: Original metric MDS (and its stress) use Euclidean distances,
     # Probabilistic MDS uses Squared Euclidean distances.
@@ -60,7 +61,7 @@ def run_pdms(D, N, args, labels=None):
         "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
     }[args.method_name]
     Z1, Z1_vars, all_losses, all_mu = pmds_method(
-        p_dists,
+        dists_with_indices,
         n_samples=N,
         n_components=args.n_components,
         batch_size=args.batch_size,
@@ -78,7 +79,7 @@ def run_pdms(D, N, args, labels=None):
         out_name=f"{plot_dir}/loss.png",
     )
 
-    plot.plot_debug_Z(all_mu, labels=labels, out_name=f"{plot_dir}/Zdebug.png")
+    # plot.plot_debug_Z(all_mu, labels=labels, out_name=f"{plot_dir}/Zdebug.png")
 
     # compare stress of 2 embedding
     s0 = score.stress(D_squareform, Z0)
@@ -97,7 +98,7 @@ def run_pdms(D, N, args, labels=None):
         f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, None, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, Z1_vars, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
     )
     plot.compare_scatter(
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
@@ -115,6 +116,7 @@ if __name__ == "__main__":
     argm("--method_name", "-m", default="MLE", help="How to optimize the model")
     argm("--normalize_dists", action="store_true", help="Normalize input distances")
     argm("--use_pre_config", "-c", action="store_true", help="Use params pre-config")
+    argm("--missing_pairs", default=0.0, type=float, help="% of missing pairs, ∈(0,1)")
     argm("--random_state", "-s", default=2020, type=int, help="Random seed")
     argm("--pca", type=float, help="Run PCA on raw data")
     argm("--std", action="store_true", help="Standardize the data")
@@ -124,17 +126,15 @@ if __name__ == "__main__":
     argm("--batch_size", "-b", default=0, type=int, help="Batch size SGD")
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
 
-    args = parser.parse_args()
-    dataset_name = args.dataset_name
-    method_name = args.method_name
-    normalize_dists = args.normalize_dists
+    args = vars(parser.parse_args())
+    dataset_name = args["dataset_name"]
+    method_name = args["method_name"]
 
-    if args.use_pre_config:
-        # load predefined config and update the config with new input arguments
+    if args["use_pre_config"]:
+        # load predefined config and update the args with new input config arguments
         config = config.pre_config[method_name][dataset_name]
-        args = argparse.Namespace(**config)
-        args.method_name = method_name
-    print("[DEBUG] input args: ", args)
+        args.update(config)
+    args = argparse.Namespace(**args)
 
     plot_dir = f"plots/{method_name}/{dataset_name}"
     if not os.path.exists(plot_dir):
@@ -147,7 +147,7 @@ if __name__ == "__main__":
         std=args.std,
         pca=args.pca,
         n_samples=args.n_samples,
-        normalize_dists=normalize_dists,
+        normalize_dists=args.normalize_dists,
     )
 
     mlflow.set_experiment(f"pmds_{method_name}")
