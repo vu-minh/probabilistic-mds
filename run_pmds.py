@@ -142,7 +142,7 @@ if __name__ == "__main__":
 
     # load pairwise Euclidean distances
     D, labels, N = dataset.load_dataset(
-        dataset_name,
+        args.dataset_name,
         data_dir="./data",
         std=args.std,
         pca=args.pca,

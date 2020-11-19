@@ -305,8 +305,8 @@ pre_config = {
             n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=50,
-            learning_rate=1e-3,
+            epochs=100,
+            learning_rate=8e-4,
             # missing_pairs=0.5,
             random_state=2020,
             std=False,  # digits already in [0, 1]
@@ -320,9 +320,9 @@ pre_config = {
             n_samples=None,  # 150
             n_components=2,
             batch_size=0,
-            epochs=20,
-            learning_rate=1e-8,
-            random_state=42,
+            epochs=100,
+            learning_rate=1e-3,
+            random_state=2020,
             std=True,  # standardize
             pca=None,
             fixed_points=[],
@@ -332,17 +332,83 @@ pre_config = {
         ),
         "iris_mini": dict(
             dataset_name="iris",
-            n_samples=40,
+            n_samples=60,
             n_components=2,
             batch_size=0,
-            epochs=30,
-            learning_rate=1e-2,
-            random_state=42,
+            epochs=100,
+            learning_rate=5e-3,
+            random_state=2020,
             std=True,  # standardize
             pca=None,
             epochs_mds=20,
             # learning_rate_mds=5,
             batch_size_mds=100,
+        ),
+        "wine": dict(
+            dataset_name="wine",
+            n_samples=None,  # use all 178 data points
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-3,
+            random_state=42,
+            std=True,
+            pca=None,
+        ),
+        "wine_mini": dict(
+            dataset_name="wine",
+            n_samples=40,  # use all 178 data points
+            n_components=2,
+            batch_size=0,
+            epochs=50,
+            learning_rate=1e-2,
+            random_state=42,
+            std=True,
+            pca=None,
+        ),
+        "breast_cancer_mini": dict(
+            dataset_name="breast_cancer",
+            n_samples=100,  # 569
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-3,
+            random_state=42,
+            std=True,
+            pca=None,
+        ),
+        "breast_cancer": dict(
+            dataset_name="breast_cancer",
+            n_samples=None,  # 569
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-3,
+            random_state=2020,
+            std=True,
+            pca=None,
+        ),
+        "digits_mini": dict(
+            dataset_name="digits",
+            n_samples=500,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=50,
+            learning_rate=5e-4,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+        ),
+        "qpcr": dict(
+            dataset_name="qpcr",
+            n_samples=None,  # 437,
+            n_components=2,
+            batch_size=0,
+            epochs=50,
+            learning_rate=3e-4,
+            random_state=42,
+            std=False,
+            pca=None,
         ),
     },
 }

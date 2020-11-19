@@ -16,7 +16,7 @@ from .score import stress
 
 DISABLE_JIT = False
 EPSILON = 1e-6
-SCALE = 1e-3
+SCALE = 1
 FIXED_RATE = 1.0 / 1e-3
 
 if DISABLE_JIT:
@@ -25,16 +25,16 @@ ones2 = jnp.ones((2,))
 zeros2 = jnp.zeros((2,))
 
 
-def log_likelihood_one_pair(mu_i, mu_j, tau_i, tau_j, D, n_components):
-    tau_ij = tau_i * tau_j / (tau_i + tau_j)
-    log_tau_ij = jnp.log(tau_i) + jnp.log(tau_j) - jnp.log(tau_i + tau_j)
+def log_likelihood_one_pair(mu_i, mu_j, tau_i, tau_j, D):
+    tau_ij_inv = tau_i * tau_j / (tau_i + tau_j + EPSILON)
+    log_tau_ij_inv = jnp.log(tau_i) + jnp.log(tau_j) - jnp.log(tau_i + tau_j)
     d_ij = jnp.linalg.norm(mu_i - mu_j) + EPSILON
 
     log_llh = (
         jnp.log(D)
-        + log_tau_ij
-        - 0.5 * tau_ij * (D * D + d_ij * d_ij)
-        + jnp.log(i0e(tau_ij * D * d_ij))
+        + log_tau_ij_inv
+        - 0.5 * tau_ij_inv * (D * D + d_ij * d_ij)
+        + jnp.log(i0e(tau_ij_inv * D * d_ij))
     )
     return log_llh
 
@@ -44,25 +44,25 @@ loss_and_grads_log_llh = jax.jit(
     jax.vmap(
         # take gradient w.r.t. the 1st, 2nd, 3rd and 4th params
         jax.value_and_grad(jax.jit(log_likelihood_one_pair), argnums=[0, 1, 2, 3]),
-        # parallel for all input params except the last one
-        in_axes=(0, 0, 0, 0, 0, None),
+        # parallel for all input params
+        in_axes=(0, 0, 0, 0, 0),
         # scalar output
         out_axes=0,
     )
 )
 
 
-def log_prior(mu, tau, mu0=0.0, beta=10.0, gamma_shape=1.0, gamma_rate=1.0):
+def log_normal_gamma_prior(mu, tau, mu0=0.0, beta=1.0, gamma_shape=1.0, gamma_rate=1.0):
     log_mu = multivariate_normal.logpdf(
-        mu, mean=mu0, cov=(1.0 / (beta * tau)) * jnp.eye(2)
-    )
+        mu, mean=mu0, cov=1.0 / (beta * tau)
+    ).sum()  # sum of 2 dimensions
     log_tau = gamma.logpdf(tau, a=gamma_shape, scale=1.0 / gamma_rate)
-    return log_mu.sum() + log_tau
+    return log_mu + log_tau
 
 
 loss_and_grads_log_prior = jax.jit(
     jax.vmap(
-        jax.value_and_grad(jax.jit(log_prior), argnums=[0, 1]),
+        jax.value_and_grad(jax.jit(log_normal_gamma_prior), argnums=[0, 1]),
         in_axes=(0, 0, None, None, None, None),
         out_axes=0,
     )
@@ -91,20 +91,20 @@ def lv_pmds(
     # init `mu` and `tau`. Transform unconstrained tau `tau_unc` to  constrained`tau`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
-    # tau = jax.abs(jax.random.normal(key_tau, (n_samples,)))
-    tau_unc = jnp.ones((n_samples,))
+    tau_unc = jax.random.normal(key_tau, (n_samples,))
+    # tau_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
     mu0 = jnp.array([0.0, 0.0])
 
-    # fixed points
-    if fixed_points:
-        fixed_indices = [p[0] for p in fixed_points]
-        fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
-        mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-        tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
+    # # fixed points
+    # if fixed_points:
+    #     fixed_indices = [p[0] for p in fixed_points]
+    #     fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
+    #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+    #     tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
 
     # patch pairwise distances and indices of each pairs together
     if isinstance(p_dists[0], float):
@@ -139,7 +139,7 @@ def lv_pmds(
 
         # calculate loss and gradients of the log likelihood term
         loss_lllh, grads_lllh = loss_and_grads_log_llh(
-            mu_i, mu_j, tau_i, tau_j, jnp.array(dists), n_components
+            mu_i, mu_j, tau_i, tau_j, jnp.array(dists)
         )
 
         # calculate loss and gradients of prior term
@@ -148,8 +148,8 @@ def lv_pmds(
         )
 
         # accumulate log likelihood and log prior
-        loss0 = float(jnp.sum(loss_lllh))
-        loss1 = float(jnp.sum(loss_log_prior))
+        loss0 = float(jnp.mean(loss_lllh))
+        loss1 = float(jnp.mean(loss_log_prior))
         loss = loss0 + loss1
         all_loss.append(loss)
         all_log_llh.append(loss0)
@@ -157,18 +157,17 @@ def lv_pmds(
 
         # update gradient for the corresponding related indices
         # note: maximize log llh (or MAP) --> use param += lr * grad (not -lr * grad)
-        grads_mu1 = jnp.concatenate((lr * grads_lllh[0], lr * grads_lllh[1]), axis=0)
-        grads_tau1 = jnp.concatenate((lr * grads_lllh[2], lr * grads_lllh[3]), axis=0)
+        grads_mu1 = jnp.concatenate((grads_lllh[0], grads_lllh[1]), axis=0)
+        grads_tau1 = jnp.concatenate((grads_lllh[2], grads_lllh[3]), axis=0)
         related_indices = i0 + i1
         assert grads_mu1.shape[0] == grads_tau1.shape[0] == len(related_indices)
 
-        grads_mu2 = lr * grads_log_prior[0]
-        grads_tau2 = lr * grads_log_prior[1]
+        grads_mu2, grads_tau2 = grads_log_prior
         assert grads_mu2.shape[0] == grads_tau2.shape[0] == n_samples
 
         # update gradient for mu
-        mu = jax.ops.index_add(mu, related_indices, grads_mu1)
-        mu = mu + grads_mu2
+        mu = jax.ops.index_add(mu, related_indices, lr * grads_mu1)
+        mu = mu + lr * grads_mu2
 
         # update gradient for constrained variable `tau`
         # but we can not update directly on constrained `tau`
@@ -179,14 +178,14 @@ def lv_pmds(
         )
         grads_tau_unc2 = grads_tau2 * jax.nn.sigmoid(SCALE * tau_unc) * SCALE
         # then, update the unconstrained variable tau_unc
-        tau_unc = jax.ops.index_add(tau_unc, related_indices, grads_tau_unc1)
-        tau_unc = tau_unc + grads_tau_unc2
+        tau_unc = jax.ops.index_add(tau_unc, related_indices, lr * grads_tau_unc1)
+        tau_unc = tau_unc + lr * grads_tau_unc2
         # in the next iteration, the constrained `tau` will be transformed from `tau_unc`
 
-        # correct gradient for fixed points
-        if fixed_points and hard_fix:
-            mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-            tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
+        # # correct gradient for fixed points
+        # if fixed_points and hard_fix:
+        #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
+        #     tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
 
         mds_stress = (
             stress(debug_D_squareform, mu) if debug_D_squareform is not None else 0.0
