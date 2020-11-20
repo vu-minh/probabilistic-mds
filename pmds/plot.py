@@ -47,14 +47,14 @@ def plot_debug_Z(all_Z, labels=None, out_name="Zdebug.png", magnitude_factor=1.0
     fig.savefig(out_name)
 
 
-def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
+def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 6)) if ax is None else (None, ax)
     ax.set_aspect("equal")
     # ax.set_xticks([])
     # ax.set_yticks([])
     cmap = "tab10" if (labels is not None and len(np.unique(labels)) > 5) else "jet"
 
-    p = {} if Z_vars is None else {"marker": "+"}
+    p = {} if Z_std is None else {"marker": "+"}
     if labels is None:
         ...
     elif isinstance(labels[0], str):
@@ -66,9 +66,9 @@ def scatter(Z, Z_vars=None, labels=None, title="", ax=None, out_name="Z.png"):
     ax.set_title(title)
     ax.scatter(*Z.T, **p)
 
-    if Z_vars is not None and Z_vars.shape == (Z.shape[0],):
+    if Z_std is not None and Z_std.shape == (Z.shape[0],):
         p.update({"marker": "o"})
-        ax.scatter(*Z.T, s=Z_vars * 500, alpha=0.05, **p)
+        ax.scatter(*Z.T, s=Z_std * 500, alpha=0.08, **p)
 
     if fig is not None:
         fig.savefig(out_name, bbox_inches="tight", transparent=True)

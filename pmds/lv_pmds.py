@@ -1,21 +1,22 @@
 # Latent variable Probabilistic MDS
-from time import time
 import random
+from functools import partial
 from itertools import combinations
+from time import time
 
 import jax
 import jax.numpy as jnp
-from jax.numpy.lax_numpy import zeros
-import mlflow
 import numpy as np
+from jax.numpy.lax_numpy import zeros
 from jax.scipy.special import i0e  # xlogy, gammaln, i0e, i1e
 from jax.scipy.stats import gamma, multivariate_normal
 
+import wandb
+
 from .score import stress
 
-
 DISABLE_JIT = False
-EPSILON = 1e-6
+EPSILON = 1e-5
 SCALE = 1
 FIXED_RATE = 1.0 / 1e-3
 
@@ -25,10 +26,13 @@ ones2 = jnp.ones((2,))
 zeros2 = jnp.zeros((2,))
 
 
+hist = wandb.Histogram
+
+
 def log_likelihood_one_pair(mu_i, mu_j, tau_i, tau_j, D):
-    tau_ij_inv = tau_i * tau_j / (tau_i + tau_j + EPSILON)
+    tau_ij_inv = tau_i * tau_j / (tau_i + tau_j)
     log_tau_ij_inv = jnp.log(tau_i) + jnp.log(tau_j) - jnp.log(tau_i + tau_j)
-    d_ij = jnp.linalg.norm(mu_i - mu_j) + EPSILON
+    d_ij = jnp.linalg.norm(mu_i - mu_j)
 
     log_llh = (
         jnp.log(D)
@@ -82,22 +86,23 @@ def lv_pmds(
     init_mu=None,
     hard_fix=False,
     method="LV",
+    mu0=[0.0, 0.0],
     beta=10.0,
-    gamma_shape=1.0,
+    gamma_shape=0.1,
     gamma_rate=1.0,
+    alpha=0.1,  # contribution of log prior
 ):
     assert n_components in [2, 4]
 
     # init `mu` and `tau`. Transform unconstrained tau `tau_unc` to  constrained`tau`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
-    tau_unc = jax.random.normal(key_tau, (n_samples,))
+    tau_unc = -4.0 * jnp.abs(jax.random.normal(key_tau, (n_samples,)))
     # tau_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
         mu = jax.random.normal(key_m, (n_samples, n_components))
-    mu0 = jnp.array([0.0, 0.0])
 
     # # fixed points
     # if fixed_points:
@@ -122,6 +127,7 @@ def lv_pmds(
     all_mu = []
 
     for epoch in range(epochs):
+        lazylog = lambda d: wandb.log(d, commit=False, step=epoch)
         tic = time()
 
         # shuffle the observed pairs in each epoch
@@ -144,13 +150,14 @@ def lv_pmds(
 
         # calculate loss and gradients of prior term
         loss_log_prior, grads_log_prior = loss_and_grads_log_prior(
-            mu, tau, mu0, beta, gamma_shape, gamma_rate
+            mu, tau, jnp.array(mu0), beta, gamma_shape, gamma_rate
         )
 
         # accumulate log likelihood and log prior
         loss0 = float(jnp.mean(loss_lllh))
         loss1 = float(jnp.mean(loss_log_prior))
-        loss = loss0 + loss1
+        loss = loss0 + alpha * loss1
+
         all_loss.append(loss)
         all_log_llh.append(loss0)
         all_log_prior.append(loss1)
@@ -167,7 +174,7 @@ def lv_pmds(
 
         # update gradient for mu
         mu = jax.ops.index_add(mu, related_indices, lr * grads_mu1)
-        mu = mu + lr * grads_mu2
+        mu = mu + alpha * lr * grads_mu2
 
         # update gradient for constrained variable `tau`
         # but we can not update directly on constrained `tau`
@@ -179,7 +186,7 @@ def lv_pmds(
         grads_tau_unc2 = grads_tau2 * jax.nn.sigmoid(SCALE * tau_unc) * SCALE
         # then, update the unconstrained variable tau_unc
         tau_unc = jax.ops.index_add(tau_unc, related_indices, lr * grads_tau_unc1)
-        tau_unc = tau_unc + lr * grads_tau_unc2
+        tau_unc = tau_unc + alpha * lr * grads_tau_unc2
         # in the next iteration, the constrained `tau` will be transformed from `tau_unc`
 
         # # correct gradient for fixed points
@@ -190,21 +197,34 @@ def lv_pmds(
         mds_stress = (
             stress(debug_D_squareform, mu) if debug_D_squareform is not None else 0.0
         )
-
-        # mlflow.log_metric("loss", loss)
-        # mlflow.log_metric("stress", mds_stress)
         print(
-            f"[DEBUG] epoch {epoch}, loss: {-loss:,.0f}, stress: {mds_stress:,.2f}, "
-            f"tau: {float(jnp.mean(tau)):.1f}, in {(time() - tic):.2f}s"
-            # f" mu in [{float(jnp.min(mu)):.3f}, {float(jnp.max(mu)):.3f}], "
-            # f" ss_unc in [{float(jnp.min(ss_unc)):.3f}, {float(jnp.max(ss_unc)):.3f}]"
+            f"[DEBUG] epoch {epoch}, loss: {-loss:,.2f}, stress: {mds_stress:,.2f},"
+            f" in {(time() - tic):.2f}s"
         )
+        total_time += time() - tic
 
         # if epoch in [1, 2, 3, 8, epochs - 8, epochs - 3, epochs - 1]:
         all_mu.append({"epoch": epoch, "Z": mu})
-        total_time += time() - tic
 
-    tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
+        lazylog({"loss": loss, "lllh": loss0, "lprior": loss1, "stress": mds_stress})
+        lazylog(
+            {
+                "tau": np.array(tau),
+                "std": np.sqrt(1.0 / tau),
+                "grad_tau1": hist(grads_tau1),
+                "grad_tau_unc1": hist(grads_tau_unc1),
+                "grad_tau2": hist(grads_tau2),
+                "grad_tau_unc2": hist(grads_tau_unc2),
+                "grad_mu11": hist(grads_mu1[:, 0]),
+                "grad_mu12": hist(grads_mu1[:, 1]),
+                "grad_mu21": hist(grads_mu2[:, 0]),
+                "grad_mu22": hist(grads_mu2[:, 1]),
+            }
+        )
 
     print(f"DONE: final loss: {loss:,.0f}, {epochs} epochs in {total_time:.2f}s")
-    return mu, tau, [all_loss, all_log_llh, all_log_prior], all_mu
+    wandb.log({"total_loss": loss})
+
+    tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
+    std = np.sqrt(1.0 / tau)
+    return mu, std, [all_loss, all_log_llh, all_log_prior], all_mu

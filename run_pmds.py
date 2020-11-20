@@ -1,7 +1,7 @@
 # import numpy as np
 import random
 from itertools import combinations
-import mlflow
+import wandb
 
 from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
@@ -60,7 +60,7 @@ def run_pdms(D, N, args, labels=None):
         "MAP": pmds_MAP,  # simple gaussian prior for mu and uniform for sigma square
         "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
     }[args.method_name]
-    Z1, Z1_vars, all_losses, all_mu = pmds_method(
+    Z1, Z1_std, all_losses, all_mu = pmds_method(
         dists_with_indices,
         n_samples=N,
         n_components=args.n_components,
@@ -98,7 +98,7 @@ def run_pdms(D, N, args, labels=None):
         f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, Z1_vars, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, Z1_std, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
     )
     plot.compare_scatter(
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
@@ -150,7 +150,5 @@ if __name__ == "__main__":
         normalize_dists=args.normalize_dists,
     )
 
-    mlflow.set_experiment(f"pmds_{method_name}")
-    with mlflow.start_run(run_name=dataset_name):
-        mlflow.log_params(vars(args))
-        res = run_pdms(D, N, args=args, labels=labels)
+    wandb.init(project=f"PMDS_{method_name}_v0.1", config=args)
+    run_pdms(D, N, args=args, labels=labels)
