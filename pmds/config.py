@@ -411,4 +411,21 @@ pre_config = {
             pca=None,
         ),
     },
+    "LV2": {
+        "digits012": dict(
+            dataset_name="digits012",
+            n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
+            n_components=2,
+            batch_size=0,
+            epochs=250,
+            learning_rate=1e-3,
+            # missing_pairs=0.5,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            epochs_mds=10,
+            # learning_rate_mds=20,
+            batch_size_mds=500,
+        ),
+    },
 }
