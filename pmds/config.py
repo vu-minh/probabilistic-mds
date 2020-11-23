@@ -427,5 +427,16 @@ pre_config = {
             # learning_rate_mds=20,
             batch_size_mds=500,
         ),
+        "digits_mini": dict(
+            dataset_name="digits",
+            n_samples=1000,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=2.5e-4,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+        ),
     },
 }

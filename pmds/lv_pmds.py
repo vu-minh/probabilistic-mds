@@ -87,17 +87,17 @@ def lv_pmds(
     hard_fix=False,
     method="LV",
     mu0=[0.0, 0.0],
-    beta=10.0,
-    gamma_shape=0.1,
-    gamma_rate=1.0,
-    alpha=0.1,  # contribution of log prior
+    beta=1.0,
+    gamma_shape=5.0,
+    gamma_rate=2.0,
+    alpha=1.0,  # contribution of log prior
 ):
     assert n_components in [2, 4]
 
     # init `mu` and `tau`. Transform unconstrained tau `tau_unc` to  constrained`tau`.
     # https://github.com/tensorflow/probability/issues/703
     key_m, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
-    tau_unc = -4.0 * jnp.abs(jax.random.normal(key_tau, (n_samples,)))
+    tau_unc = jax.random.normal(key_tau, (n_samples,))
     # tau_unc = jnp.ones((n_samples,))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
@@ -154,8 +154,8 @@ def lv_pmds(
         )
 
         # accumulate log likelihood and log prior
-        loss0 = float(jnp.mean(loss_lllh))
-        loss1 = float(jnp.mean(loss_log_prior))
+        loss0 = float(jnp.sum(loss_lllh))
+        loss1 = float(jnp.sum(loss_log_prior))
         loss = loss0 + alpha * loss1
 
         all_loss.append(loss)
