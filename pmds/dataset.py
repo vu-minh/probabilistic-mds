@@ -39,6 +39,7 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
         "wine": datasets.load_wine,
         "digits": datasets.load_digits,
         "digits012": partial(datasets.load_digits, n_class=3),
+        "digits5": partial(datasets.load_digits, n_class=5),
         "breast_cancer": datasets.load_breast_cancer,
         "cities_us": load_cities_us,
     }[dataset_name]

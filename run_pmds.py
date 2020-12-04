@@ -8,6 +8,7 @@ from scipy.spatial.distance import squareform
 
 from pmds.pmds_MLE import pmds_MLE
 from pmds.pmds_MAP import pmds_MAP
+from pmds.pmds_MAP2 import pmds_MAP2
 from pmds.lv_pmds import lv_pmds
 from pmds.lv_pmds2 import lv_pmds2
 from pmds.mds_jax import mds
@@ -61,6 +62,7 @@ def run_pdms(D, N, args, labels=None):
         "MAP": pmds_MAP,  # simple gaussian prior for mu and uniform for sigma square
         "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
         "LV2": lv_pmds2,
+        "MAP2": pmds_MAP2,
     }[args.method_name]
     Z1, Z1_std, all_losses, all_mu = pmds_method(
         dists_with_indices,
@@ -100,7 +102,7 @@ def run_pdms(D, N, args, labels=None):
         f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, None, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, Z1_std, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
     )
     plot.compare_scatter(
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
@@ -152,5 +154,5 @@ if __name__ == "__main__":
         normalize_dists=args.normalize_dists,
     )
 
-    wandb.init(project=f"PMDS_{method_name}_v0.2", config=args)
+    wandb.init(project=f"PMDS_{method_name}_v0.3", config=args)
     run_pdms(D, N, args=args, labels=labels)

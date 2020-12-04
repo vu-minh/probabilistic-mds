@@ -49,7 +49,7 @@ def plot_debug_Z(all_Z, labels=None, out_name="Zdebug.png", magnitude_factor=1.0
 
 def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 6)) if ax is None else (None, ax)
-    ax.set_aspect("equal")
+    # ax.set_aspect("equal")
     # ax.set_xticks([])
     # ax.set_yticks([])
     cmap = "tab10" if (labels is not None and len(np.unique(labels)) > 5) else "jet"

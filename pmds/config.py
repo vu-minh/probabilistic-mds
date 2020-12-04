@@ -291,7 +291,7 @@ pre_config = {
             n_samples=50,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=50,
+            epochs=150,
             learning_rate=2e-2,
             random_state=2020,
             std=False,  # digits already in [0, 1]
@@ -302,18 +302,29 @@ pre_config = {
         ),
         "digits012": dict(
             dataset_name="digits012",
-            n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
+            n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=150,
-            learning_rate=1e-3,
+            epochs=500,
+            learning_rate=2.5e-4,
             # missing_pairs=0.5,
-            random_state=2020,
+            random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=10,
             # learning_rate_mds=20,
             batch_size_mds=500,
+        ),
+        "digits5": dict(
+            dataset_name="digits",
+            n_samples=500,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=150,
+            learning_rate=1e-3,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
         ),
         "iris": dict(
             dataset_name="iris",
@@ -414,12 +425,51 @@ pre_config = {
     "LV2": {
         "digits012": dict(
             dataset_name="digits012",
-            n_samples=150,  # None for all 537 data points of classes [0 ,1, 2]
+            n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=250,
+            epochs=100,
             learning_rate=1e-3,
             # missing_pairs=0.5,
+            random_state=42,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            epochs_mds=10,
+            # learning_rate_mds=20,
+            batch_size_mds=500,
+        ),
+        "digits5": dict(
+            dataset_name="digits",
+            n_samples=500,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=150,
+            learning_rate=1e-3,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+        ),
+        "digits_mini": dict(
+            dataset_name="digits",
+            n_samples=500,  # 1797
+            n_components=2,
+            batch_size=0,
+            epochs=150,
+            learning_rate=8e-4,
+            random_state=2020,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+        ),
+    },
+    "MAP2": {
+        "digits012": dict(
+            dataset_name="digits012",
+            n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
+            n_components=2,
+            batch_size=0,
+            epochs=200,
+            learning_rate=3e-5,  # (no missing: 5e-6, missing 50%: 3e-5) ,
+            missing_pairs=0.5,
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
@@ -427,13 +477,13 @@ pre_config = {
             # learning_rate_mds=20,
             batch_size_mds=500,
         ),
-        "digits_mini": dict(
+        "digits5": dict(
             dataset_name="digits",
-            n_samples=1000,  # 1797
+            n_samples=250,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=100,
-            learning_rate=2.5e-4,
+            epochs=200,
+            learning_rate=1e-5,
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
