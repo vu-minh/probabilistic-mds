@@ -468,9 +468,9 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=200,
-            learning_rate=3e-5,  # (no missing: 5e-6, missing 50%: 3e-5) ,
-            missing_pairs=0.5,
-            random_state=2020,
+            learning_rate=3e-5,  # (no missing: 5e-6 or 1e-5, missing 50%: 3e-5) ,
+            missing_pairs=0.6,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
             epochs_mds=10,
@@ -487,6 +487,23 @@ pre_config = {
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
+        ),
+    },
+    "MAP3": {
+        "digits012": dict(
+            dataset_name="digits012",
+            n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=8e-5,
+            missing_pairs=0.0,
+            random_state=2021,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            epochs_mds=10,
+            # learning_rate_mds=20,
+            batch_size_mds=500,
         ),
     },
 }

@@ -9,6 +9,7 @@ from scipy.spatial.distance import squareform
 from pmds.pmds_MLE import pmds_MLE
 from pmds.pmds_MAP import pmds_MAP
 from pmds.pmds_MAP2 import pmds_MAP2
+from pmds.pmds_MAP3 import pmds_MAP3
 from pmds.lv_pmds import lv_pmds
 from pmds.lv_pmds2 import lv_pmds2
 from pmds.mds_jax import mds
@@ -61,8 +62,9 @@ def run_pdms(D, N, args, labels=None):
         "MLE": pmds_MLE,  # simple maximum likelihood
         "MAP": pmds_MAP,  # simple gaussian prior for mu and uniform for sigma square
         "LV": lv_pmds,  # conjugate prior for (mu, precision) using Gaussian-Gamma dist.
-        "LV2": lv_pmds2,
-        "MAP2": pmds_MAP2,
+        "LV2": lv_pmds2,  # using only one loss function for auto aggregating gradients
+        "MAP2": pmds_MAP2,  # not use log sigma (uniform for sigma)
+        "MAP3": pmds_MAP3,  # for testing/debugging log llh + log prior
     }[args.method_name]
     Z1, Z1_std, all_losses, all_mu = pmds_method(
         dists_with_indices,
@@ -154,5 +156,5 @@ if __name__ == "__main__":
         normalize_dists=args.normalize_dists,
     )
 
-    wandb.init(project=f"PMDS_{method_name}_v0.3", config=args)
+    wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
     run_pdms(D, N, args=args, labels=labels)
