@@ -568,6 +568,18 @@ pre_config = {
             # learning_rate_mds=10,
             # batch_size_mds=20,
         ),
+        "qpcr": dict(
+            dataset_name="qpcr",
+            n_samples=200,  # 437,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-8,
+            sigma_local=1e-3,
+            random_state=42,
+            std=False,
+            pca=None,
+        ),
         "iris": dict(
             dataset_name="iris",
             n_samples=None,  # 150
