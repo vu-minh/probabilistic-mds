@@ -148,7 +148,6 @@ if __name__ == "__main__":
         args.update(config)
     args = argparse.Namespace(**args)
 
-    embedding_dir = f"embeddings/{method_name}/{dataset_name}"
     plot_dir = f"plots/{method_name}/{dataset_name}"
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
@@ -168,4 +167,4 @@ if __name__ == "__main__":
     else:
         wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
     Z1, Z1_std = run_pdms(D, N, args=args, labels=labels)
-    joblib.dump([Z1, Z1_std], f"{embedding_dir}/Z.Z")
+    # joblib.dump([Z1, Z1_std], f"embeddings/{dataset_name}_{method_name}.Z")

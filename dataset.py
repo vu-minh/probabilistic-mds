@@ -10,8 +10,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
 
+from plot import generate_stacked_svg
+
 
 DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
+ALWAYS_REGENERATE_SVG = True
 
 
 def load_dataset(
@@ -49,7 +52,17 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
     }[dataset_name]
 
     # shuffle dataset, set `n_samples=None` to take all data
-    X, labels = shuffle(*load_func(return_X_y=True), n_samples=n_samples)
+    X, labels = shuffle(
+        *load_func(return_X_y=True), n_samples=n_samples, random_state=42
+    )
+    if dataset_name.startswith(("digits", "mnist", "fashion", "fmnist")):
+        image_types = ["gray", "color"]
+        for image_type in image_types:
+            image_name = f"./embeddings/{dataset_name}_{image_type}.svg"
+            if ALWAYS_REGENERATE_SVG or not os.path.exists(image_name):
+                generate_stacked_svg(
+                    image_name, X, labels=None if image_type == "gray" else labels
+                )
 
     # test standardize input data
     if std:
@@ -145,7 +158,7 @@ def load_fashion_mnist(data_dir="./data", reload=False, classes=None, return_X_y
 if __name__ == "__main__":
     # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
-    D, labels, N = load_dataset("fmnist_subset", data_dir="./data", n_samples=1000)
+    D, labels, N = load_dataset("digits012", data_dir="./data", n_samples=1000)
     print(labels.shape, D.shape, np.unique(labels))
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)

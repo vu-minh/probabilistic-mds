@@ -115,7 +115,8 @@ SVG_META_DATA = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
 "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <!-- Created with matplotlib (http://matplotlib.org/),
     modified to stack multiple svg elemements,
-    used for packing all images in a dataset
+    used for packing all images in a dataset.
+    Author: Minh Vu, 2017 - 2020
 -->
 <svg version="1.1" width="28" height="28" viewBox="0 0 28 28"
     xmlns="http://www.w3.org/2000/svg"
