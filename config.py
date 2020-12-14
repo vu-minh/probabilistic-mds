@@ -492,6 +492,41 @@ pre_config = {
             std=False,  # digits already in [0, 1]
             pca=None,
         ),
+        "fmnist": dict(
+            dataset_name="fmnist",
+            n_samples=150,  # None 1000 samples
+            n_components=2,
+            batch_size=0,
+            epochs=150,
+            learning_rate=1.5e-9,
+            sigma_local=1e-5,
+            # missing_pairs=0.0,
+            random_state=42,
+            std=False,  # digits already in [0, 1]
+            pca=0.9,
+            fixed_points=[
+                # (0, -1.0, -1.0),
+            ],
+            # epochs_mds=20,
+            # learning_rate_mds=20,
+            # batch_size_mds=500,
+        ),
+        "fmnist_subset": dict(
+            dataset_name="fmnist_subset",
+            n_samples=150,  # None 1000 samples
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1.5e-9,
+            sigma_local=1e-5,
+            # missing_pairs=0.0,
+            random_state=42,
+            std=False,  # digits already in [0, 1]
+            pca=0.9,
+            fixed_points=[
+                # (0, -1.0, -1.0),
+            ],
+        ),
         "cities_us_toy": dict(
             dataset_name="cities_us_toy",
             n_samples=None,  # 10

@@ -1,5 +1,7 @@
 import os
 import joblib
+import gzip
+
 from functools import partial
 import numpy as np
 from sklearn import datasets
@@ -40,6 +42,8 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
         "digits": datasets.load_digits,
         "digits012": partial(datasets.load_digits, n_class=3),
         "digits5": partial(datasets.load_digits, n_class=5),
+        "fmnist": load_fashion_mnist,
+        "fmnist_subset": partial(load_fashion_mnist, classes=[1, 2, 6, 8, 9]),
         "breast_cancer": datasets.load_breast_cancer,
         "cities_us": load_cities_us,
     }[dataset_name]
@@ -102,7 +106,47 @@ def load_qpcr(data_dir="./data"):
     return dists, labels, len(labels)
 
 
+def _load_fashion_mnist(path, kind="train"):
+
+    """Load Fashion-MNIST data from `path`
+    https://github.com/zalandoresearch/fashion-mnist/blob/master/utils/mnist_reader.py
+    """
+    labels_path = os.path.join(path, "%s-labels-idx1-ubyte.gz" % kind)
+    images_path = os.path.join(path, "%s-images-idx3-ubyte.gz" % kind)
+
+    with gzip.open(labels_path, "rb") as lbpath:
+        labels = np.frombuffer(lbpath.read(), dtype=np.uint8, offset=8)
+
+    with gzip.open(images_path, "rb") as imgpath:
+        images = np.frombuffer(imgpath.read(), dtype=np.uint8, offset=16).reshape(
+            len(labels), 784
+        )
+
+    return images, labels
+
+
+def load_fashion_mnist(data_dir="./data", reload=False, classes=None, return_X_y=True):
+    classes_name = "".join(map(str, classes)) if classes is not None else "all"
+    in_name = f"{data_dir}/fmnist_samples_{classes_name}_1K.z"
+    print(in_name)
+    if reload or not os.path.exists(in_name):
+        images, labels = _load_fashion_mnist(path=f"{data_dir}/fashion", kind="train")
+        if classes is not None:
+            indices = [i for i, lbl in enumerate(labels) if lbl in classes]
+            images, labels = shuffle(images[indices], labels[indices], n_samples=1000)
+            print(np.unique(labels))
+        else:
+            images, labels = shuffle(images, labels, n_samples=1000)
+        images = images / 255.0
+        joblib.dump([images, labels], in_name)
+    return joblib.load(in_name)
+
+
 if __name__ == "__main__":
-    D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
+    # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
-    print(labels.shape, D.shape)
+    D, labels, N = load_dataset("fmnist_subset", data_dir="./data", n_samples=1000)
+    print(labels.shape, D.shape, np.unique(labels))
+
+    # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)
+    # print(X_train.shape, X_train.min(), X_train.max())

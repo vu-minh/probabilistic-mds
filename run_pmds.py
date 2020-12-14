@@ -13,7 +13,8 @@ from pmds.pmds_MAP3 import pmds_MAP3
 from pmds.lv_pmds import lv_pmds
 from pmds.lv_pmds2 import lv_pmds2
 from pmds.mds_jax import mds
-from pmds import score, plot, dataset, config
+from pmds import score
+import plot, dataset, config
 
 
 def run_pdms(D, N, args, labels=None):

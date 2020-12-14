@@ -71,21 +71,15 @@ def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     if Z_std is not None and Z_std.shape == (Z.shape[0],):
         # determine size for uncertainty around each point
         std_size = marker_default_size * (1.0 + Z_std * 10)
-        print(
-            "Z_std",
-            np.min(Z_std),
-            np.max(Z_std),
-            "DEFAULT size: ",
-            marker_default_size,
-            "std_size: ",
-            np.max(std_size),
-            np.min(std_size),
-        )
         p.update({"marker": "o", "s": std_size ** 2})
         ax.scatter(*Z.T, alpha=0.08, **p)
 
     if fig is not None:
         fig.savefig(out_name, bbox_inches="tight", transparent=True)
+
+
+def scatter_with_images():
+    ...
 
 
 def compare_scatter(Z0, Z1, Z0_vars, Z1_vars, labels, titles, out_name="compare.png"):
