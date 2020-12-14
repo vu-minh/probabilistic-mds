@@ -494,11 +494,11 @@ pre_config = {
         ),
         "fmnist": dict(
             dataset_name="fmnist",
-            n_samples=150,  # None 1000 samples
+            n_samples=200,  # None 1000 samples
             n_components=2,
             batch_size=0,
             epochs=150,
-            learning_rate=1.5e-9,
+            learning_rate=1e-9,
             sigma_local=1e-5,
             # missing_pairs=0.0,
             random_state=42,
@@ -513,11 +513,11 @@ pre_config = {
         ),
         "fmnist_subset": dict(
             dataset_name="fmnist_subset",
-            n_samples=150,  # None 1000 samples
+            n_samples=200,  # None 1000 samples
             n_components=2,
             batch_size=0,
             epochs=150,
-            learning_rate=1.5e-9,
+            learning_rate=1e-9,
             sigma_local=1e-5,
             # missing_pairs=0.0,
             random_state=42,

@@ -167,4 +167,4 @@ if __name__ == "__main__":
     else:
         wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
     Z1, Z1_std = run_pdms(D, N, args=args, labels=labels)
-    # joblib.dump([Z1, Z1_std], f"embeddings/{dataset_name}_{method_name}.Z")
+    joblib.dump([Z1, Z1_std], f"embeddings/{dataset_name}_{method_name}.Z")
