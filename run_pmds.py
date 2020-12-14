@@ -112,9 +112,12 @@ def run_pdms(D, N, args, labels=None):
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
     )
 
+    return Z1, Z1_std
+
 
 if __name__ == "__main__":
     import os
+    import joblib
     import argparse
 
     parser = argparse.ArgumentParser()
@@ -145,6 +148,7 @@ if __name__ == "__main__":
         args.update(config)
     args = argparse.Namespace(**args)
 
+    embedding_dir = f"embeddings/{method_name}/{dataset_name}"
     plot_dir = f"plots/{method_name}/{dataset_name}"
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
@@ -163,4 +167,5 @@ if __name__ == "__main__":
         print("Using params: ", args)
     else:
         wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
-    run_pdms(D, N, args=args, labels=labels)
+    Z1, Z1_std = run_pdms(D, N, args=args, labels=labels)
+    joblib.dump([Z1, Z1_std], f"{embedding_dir}/Z.Z")
