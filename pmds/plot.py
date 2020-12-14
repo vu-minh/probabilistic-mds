@@ -1,6 +1,7 @@
 import mlflow
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 
 
 def line(points, out_name="line.png"):
@@ -53,6 +54,7 @@ def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     # ax.set_xticks([])
     # ax.set_yticks([])
     cmap = "tab10" if (labels is not None and len(np.unique(labels)) > 5) else "jet"
+    marker_default_size = rcParams["lines.markersize"]
 
     p = {} if Z_std is None else {"marker": "+"}
     if labels is None:
@@ -67,8 +69,20 @@ def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     ax.scatter(*Z.T, **p)
 
     if Z_std is not None and Z_std.shape == (Z.shape[0],):
-        p.update({"marker": "o"})
-        ax.scatter(*Z.T, s=Z_std * 500, alpha=0.08, **p)
+        # determine size for uncertainty around each point
+        std_size = marker_default_size * (1.0 + Z_std * 10)
+        print(
+            "Z_std",
+            np.min(Z_std),
+            np.max(Z_std),
+            "DEFAULT size: ",
+            marker_default_size,
+            "std_size: ",
+            np.max(std_size),
+            np.min(std_size),
+        )
+        p.update({"marker": "o", "s": std_size ** 2})
+        ax.scatter(*Z.T, alpha=0.08, **p)
 
     if fig is not None:
         fig.savefig(out_name, bbox_inches="tight", transparent=True)
