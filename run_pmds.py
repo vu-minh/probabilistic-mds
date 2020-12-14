@@ -74,6 +74,7 @@ def run_pdms(D, N, args, labels=None):
         random_state=args.random_state,
         debug_D_squareform=D_squareform,
         fixed_points=vars(args).get("fixed_points", []),
+        sigma_local=vars(args).get("sigma_local", 1e-3)
         # init_mu=Z0,
     )
 
@@ -129,6 +130,7 @@ if __name__ == "__main__":
     argm("--learning_rate", "-lr", default=1e-3, type=float, help="Learning rate SGD")
     argm("--batch_size", "-b", default=0, type=int, help="Batch size SGD")
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
+    argm("--no_logging", action="store_true", help="Disable W&B / MLFlow logging")
 
     args = vars(parser.parse_args())
     dataset_name = args["dataset_name"]
@@ -154,5 +156,8 @@ if __name__ == "__main__":
         normalize_dists=args.normalize_dists,
     )
 
-    wandb.init(project=f"PMDS_{method_name}_v0.3", config=args)
+    if args.no_logging:
+        print("Using params: ", args)
+    else:
+        wandb.init(project=f"PMDS_{method_name}_v0.3", config=args)
     run_pdms(D, N, args=args, labels=labels)

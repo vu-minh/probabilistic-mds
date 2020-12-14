@@ -1,61 +1,53 @@
 # Latent variable Probabilistic MDS
 import random
-from itertools import combinations
 from time import time
 
+import wandb
 import jax
 import jax.numpy as jnp
 import numpy as np
-from jax.scipy.special import i0e  # xlogy, gammaln, i0e, i1e
-from jax.scipy.stats import gamma, multivariate_normal
-
-import wandb
+from jax.scipy.special import i0e
+from jax.scipy.stats import multivariate_normal
 
 from .score import stress, sammonZ
 
 
-DISABLE_JIT = False
 EPSILON = 1e-5
-SCALE = 1
-FIXED_RATE = 1.0 / 1e-3
+FIXED_SCALE = 1e-3
+DISABLE_LOGGING = True
 
-if DISABLE_JIT:
-    jax.jit = lambda x: x
-
-# lazylog = lambda i, d: None
-lazylog = lambda i, d: wandb.log(d, commit=False, step=i)
 hist = wandb.Histogram
+if DISABLE_LOGGING:
+    metric_log = lambda _: None
+    lazylog = lambda _, __: None
+else:
+    metric_log = wandb.log
+    lazylog = lambda i, d: wandb.log(d, commit=False, step=i)
 
 
-def loss_MAP(
-    mu, tau_unc, D, i0, i1, mu0, beta=1.0, gamma_shape=1.0, gamma_rate=1.0, alpha=1.0
-):
+def log_prior_mu(mu, mu0, sigma0):
+    return multivariate_normal.logpdf(mu, mean=mu0, cov=sigma0).sum()
+
+
+log_prior_mu_batch = jax.vmap(log_prior_mu, in_axes=(0, 0, 0), out_axes=0)
+
+
+def loss_MAP(mu, D, i0, i1, mu0, sigma0, sigma_local, alpha):
     mu_i, mu_j = mu[i0], mu[i1]
-    # tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
-    tau = 1e3 * jnp.ones((2, 1))
-    tau_i, tau_j = tau[i0], tau[i1]
-
-    tau_ij = tau_i * tau_j / (tau_i + tau_j)
-    # log_tau_ij = jnp.log(tau_i) + jnp.log(tau_j) - jnp.log(tau_i + tau_j)
-
+    sigma_ij = sigma_local[i0] + sigma_local[i1]
     d = jnp.linalg.norm(mu_i - mu_j, ord=2, axis=1, keepdims=1)
 
     log_llh = (
-        jnp.log(D)  # this is constant, can remove from the obj func?
-        + jnp.log(tau_ij)
-        - 0.5 * tau_ij * (D - d) ** 2
-        + jnp.log(i0e(tau_ij * D * d))
+        jnp.log(D)
+        - jnp.log(sigma_ij)
+        - 0.5 * (D - d + EPSILON) ** 2 / sigma_ij
+        + jnp.log(i0e(D * d + EPSILON / sigma_ij))
     )
-
-    # index of points in prior
-    log_mu = multivariate_normal.logpdf(mu, mean=mu0, cov=jnp.eye(2))
-    # log_tau = gamma.logpdf(tau, a=gamma_shape, scale=1.0 / gamma_rate)
-
-    return jnp.sum(log_llh) + jnp.sum(log_mu)  # + jnp.sum(log_tau)
+    log_mu_all = log_prior_mu_batch(mu, mu0, sigma0)
+    return jnp.sum(log_llh) + alpha * jnp.sum(log_mu_all)
 
 
-# TODO jit it
-loss_and_grads_MAP = jax.value_and_grad(loss_MAP, argnums=[0, 1])
+loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP), argnums=[0]))
 
 
 def pmds_MAP2(
@@ -71,38 +63,39 @@ def pmds_MAP2(
     init_mu=None,
     hard_fix=False,
     method="LV",
-    mu0=[0.0, 0.0],
-    beta=0.16,
-    gamma_shape=5.0,
-    gamma_rate=2.0,
-    alpha=1.0,  # contribution of log prior
+    sigma_local=1e-3,
+    alpha=None,  # contribution of log prior
 ):
-    mu0 = jnp.array(mu0)
+    # can multiply the log prior with factor N
+    if alpha is None:
+        alpha = n_samples - 1
 
-    # init `mu` and `tau`. Transform unconstrained tau `tau_unc` to  constrained `tau`.
-    # https://github.com/tensorflow/probability/issues/703
-    key_mu, key_tau = jax.random.split(jax.random.PRNGKey(random_state))
-    tau_unc = -4.0 * jnp.abs(jax.random.normal(key_tau, (n_samples, 1)))
-    # tau_unc = jnp.ones((n_samples,))
+    # global param for each mu
+    mu0 = jnp.zeros((n_samples, 2))
+    sigma0 = jnp.zeros((n_samples, 2, 2)) + jnp.eye(2)
+
+    # local variance for each point
+    sigma_local = jnp.ones((2, 1)) * sigma_local
+
+    key_mu, _ = jax.random.split(jax.random.PRNGKey(random_state))
     if init_mu is not None and init_mu.shape == (n_samples, n_components):
         mu = jnp.array(init_mu)
     else:
-        mu = jax.random.multivariate_normal(
-            key=key_mu, mean=mu0, cov=jnp.eye(2), shape=[n_samples]
-        )
-        # mu = jax.random.normal(key_mu, (n_samples, n_components))
+        mu = jax.random.normal(key_mu, (n_samples, n_components))
+        # mu = jnp.zeros((n_samples, 2))
 
-    # # fixed points
-    # if fixed_points:
-    #     fixed_indices = [p[0] for p in fixed_points]
-    #     fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
-    #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-    #     tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
+    # fixed points
+    if fixed_points:
+        fixed_indices = jnp.array([p[0] for p in fixed_points])
+        fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
+        mu0 = jax.ops.index_update(mu0, fixed_indices, fixed_pos)
+        sigma0 = jax.ops.index_update(
+            sigma0, fixed_indices, FIXED_SCALE * sigma0[fixed_indices]
+        )
 
     loss = 0.0
     total_time = 0
     all_loss = []
-    all_mu = []
     mds_stress = sammon_err = 0.0
 
     for epoch in range(epochs):
@@ -115,18 +108,10 @@ def pmds_MAP2(
         dists = jnp.array(dists).reshape(-1, 1)
         i0, i1 = map(jnp.array, zip(*pair_indices))
 
-        loss, [grads_mu, grads_tau_unc] = loss_and_grads_MAP(
-            mu, tau_unc, dists, i0, i1, mu0, beta, gamma_shape, gamma_rate, alpha
+        loss, [grads_mu] = loss_and_grads_MAP(
+            mu, dists, i0, i1, mu0, sigma0, sigma_local, alpha
         )
-        mu = mu + lr * grads_mu
-        # grads_tau_unc = grads_tau * jax.nn.sigmoid(SCALE * tau_unc) * SCALE
-        # tau_unc = tau_unc + lr * grads_tau_unc
-        # tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
-
-        # # correct gradient for fixed points
-        # if fixed_points and hard_fix:
-        #     mu = jax.ops.index_update(mu, fixed_indices, fixed_pos)
-        #     tau_unc = jax.ops.index_update(tau_unc, fixed_indices, FIXED_RATE)
+        mu = mu + alpha * lr * grads_mu
 
         if debug_D_squareform is not None:
             mds_stress = stress(debug_D_squareform, mu)
@@ -138,28 +123,19 @@ def pmds_MAP2(
         )
         total_time += time() - tic
 
-        # if epoch in [1, 2, 3, 8, epochs - 8, epochs - 3, epochs - 1]:
-        # all_mu.append({"epoch": epoch, "Z": mu})
         all_loss.append(loss)
-
-        tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
         lazylog(
             epoch,
             {
                 "loss": float(loss),
                 "stress": mds_stress,
                 "sammon": sammon_err,
-                "tau": np.array(tau),
-                "std": np.sqrt(1.0 / tau),  # TODO: beta * tau ?
                 "grad_mu1": hist(grads_mu[:, 0]),
                 "grad_mu2": hist(grads_mu[:, 1]),
-                "grad_tau_unc": hist(grads_tau_unc),
             },
         )
 
     print(f"DONE: final loss: {loss:,.0f}; {epochs} epochs in {total_time:.2f}s")
-    wandb.log({"total_loss": float(loss)})
+    metric_log({"total_loss": float(loss)})
 
-    tau = EPSILON + jax.nn.softplus(SCALE * tau_unc)
-    std = np.sqrt(1.0 / tau)  # TODO: beta * tau?
-    return mu, std, [all_loss, [], []], all_mu
+    return mu, None, [all_loss, [], []], None

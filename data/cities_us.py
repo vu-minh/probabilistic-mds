@@ -31,7 +31,7 @@ def parse_dists(data_dir="."):
         lines = in_file.readlines()[7:]
         dists = []
         for line in lines:
-            dists.append(list(map(int, line.split())))
+            dists.append(list(map(float, line.split())))
 
     return np.array(dists)
 

@@ -464,15 +464,18 @@ pre_config = {
     "MAP2": {
         "digits012": dict(
             dataset_name="digits012",
-            n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
+            n_samples=50,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=200,
-            learning_rate=3e-5,  # (no missing: 5e-6, missing 50%: 3e-5) ,
-            missing_pairs=0.5,
+            epochs=100,
+            learning_rate=1e-8,  # (no missing: 5e-6, missing 50%: 3e-5) ,
+            # missing_pairs=0.0,
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
+            fixed_points=[
+                (0, 0.0, 0.0),
+            ],
             epochs_mds=10,
             # learning_rate_mds=20,
             batch_size_mds=500,
@@ -487,6 +490,71 @@ pre_config = {
             random_state=2020,
             std=False,  # digits already in [0, 1]
             pca=None,
+        ),
+        "cities_us_toy": dict(
+            dataset_name="cities_us_toy",
+            n_samples=None,  # 10
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1e-5,
+            sigma_local=1e-3,
+            # missing_pairs=0.0,
+            random_state=42,
+            std=False,
+            pca=None,
+            fixed_points=[
+                (0, 0.5, 2.0),  # New York
+                (6, -0.5, 2.0),  # Olympia
+                # TODO test with only one moving point for Olympia
+                # (0, 0.4, 0.3),
+                # (6, -0.4, 0.2),
+                # (2, -0.4, 0.1),  # los angles
+                # (6, 0.0, -0.4),
+            ],
+            ### params for MDS-jax
+            epochs_mds=10,
+            learning_rate_mds=10,
+            batch_size_mds=20,
+        ),
+        "cities_us": dict(
+            dataset_name="cities_us",
+            n_samples=128,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=2e-6,
+            random_state=42,
+            std=False,
+            pca=None,
+            ### params for MDS-jax
+            # epochs_mds=20,
+            # learning_rate_mds=10,
+            # batch_size_mds=20,
+        ),
+        "iris": dict(
+            dataset_name="iris",
+            n_samples=None,  # 150
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1.2e-9,
+            random_state=42,
+            std=True,  # standardize
+            pca=None,
+            fixed_points=[],
+        ),
+        "wine": dict(
+            dataset_name="wine",
+            n_samples=100,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=1.5e-9,
+            random_state=42,
+            std=True,  # standardize
+            pca=None,
+            fixed_points=[],
         ),
     },
 }

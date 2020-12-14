@@ -103,6 +103,6 @@ def load_qpcr(data_dir="./data"):
 
 
 if __name__ == "__main__":
-    D, labels, N = load_dataset("digits012", data_dir="./data", missing_pairs=0.5)
+    D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
     print(labels.shape, D.shape)
