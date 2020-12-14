@@ -158,12 +158,8 @@ if __name__ == "__main__":
         normalize_dists=args.normalize_dists,
     )
 
-<<<<<<< HEAD
     if args.no_logging:
         print("Using params: ", args)
     else:
-        wandb.init(project=f"PMDS_{method_name}_v0.3", config=args)
-=======
-    wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
->>>>>>> 194f8a50394926d1e1f2fb7fe0fa48dab8b88611
+        wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
     run_pdms(D, N, args=args, labels=labels)
