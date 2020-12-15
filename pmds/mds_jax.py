@@ -77,8 +77,7 @@ def mds(
 
             # unpatch pairwise distances and indices of points in each pair
             dists, pair_indices = list(zip(*batch))
-            i0, i1 = list(zip(*pair_indices))
-            i0, i1 = list(i0), list(i1)
+            i0, i1 = map(jnp.array, zip(*pair_indices))
 
             params = Z[i0], Z[i1]
             loss_batch, grads = loss_and_grads_batched(params, jnp.array(dists))
@@ -86,7 +85,9 @@ def mds(
 
             # update gradient
             grads_Z = jnp.concatenate(grads, axis=0)
-            Z = jax.ops.index_add(Z, i0 + i1, -lr * grads_Z / batch_size)
+            Z = jax.ops.index_add(
+                Z, jnp.concatenate([i0, i1]), -lr * grads_Z / batch_size
+            )
         loss = float(loss / (i + 1))
         print("[DEBUG] MDS-jax: ", epoch, loss)
     return Z

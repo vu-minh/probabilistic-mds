@@ -556,8 +556,8 @@ pre_config = {
             std=False,
             pca=None,
             fixed_points=[
-                (0, 0.5, 2.0),  # New York
-                (6, -0.5, 2.0),  # Olympia
+                # (0, 0.5, 2.0),  # New York
+                # (6, -0.5, 2.0),  # Olympia
                 # TODO test with only one moving point for Olympia
                 # (0, 0.4, 0.3),
                 # (6, -0.4, 0.2),
@@ -565,9 +565,9 @@ pre_config = {
                 # (6, 0.0, -0.4),
             ],
             ### params for MDS-jax
-            epochs_mds=10,
-            learning_rate_mds=10,
-            batch_size_mds=20,
+            # epochs_mds=10,
+            # learning_rate_mds=10,
+            # batch_size_mds=20,
         ),
         "cities_us": dict(
             dataset_name="cities_us",
@@ -619,6 +619,25 @@ pre_config = {
             std=True,  # standardize
             pca=None,
             fixed_points=[],
+        ),
+        "swiss_roll": dict(
+            dataset_name="swiss_roll",
+            n_samples=300,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
+            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            # missing_pairs=0.0,
+            random_state=42,
+            std=False,  # digits already in [0, 1]
+            pca=None,
+            fixed_points=[
+                # (0, -1.0, -1.0),
+            ],
+            # epochs_mds=30,
+            # learning_rate_mds=80,
+            # batch_size_mds=1000,
         ),
     },
     "MAP3": {

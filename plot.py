@@ -22,7 +22,7 @@ def plot_losses(all_losses, titles=[], out_name="loss.png"):
     fig, axes = plt.subplots(3, 1, figsize=(6, 6))
     colors = [f"C{i+1}" for i in range(len(all_losses))]
     for ax, loss, title, color in zip(axes, all_losses, titles, colors):
-        ax.plot(loss, c=color)
+        ax.plot(loss[2:], c=color)
         ax.set_title(title)
     fig.tight_layout(pad=0.3)
     fig.savefig(out_name)
@@ -57,7 +57,7 @@ def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
     ax.set_aspect("equal")
     # ax.set_xticks([])
     # ax.set_yticks([])
-    cmap = "tab10" if (labels is not None and len(np.unique(labels)) > 5) else "jet"
+    cmap = "tab10" if (labels is not None and len(np.unique(labels)) <= 10) else "jet"
     marker_default_size = rcParams["lines.markersize"]
 
     p = {} if Z_std is None else {"marker": "+"}

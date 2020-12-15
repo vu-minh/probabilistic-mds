@@ -115,6 +115,6 @@ def run_pmds(dataset_name, fixed_points):
         # debug_D_squareform=D_squareform,
         fixed_points=fixed_points,
         sigma_local=vars(args).get("sigma_local", 1e-3),
-        # init_mu=Z_init,
+        init_mu=Z_init,
     )
     return Z

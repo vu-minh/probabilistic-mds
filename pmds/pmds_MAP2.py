@@ -13,7 +13,7 @@ from .score import stress, sammonZ
 
 
 EPSILON = 1e-5
-FIXED_SCALE = 1e-3
+FIXED_SCALE = 5e-1
 DISABLE_LOGGING = True
 
 hist = wandb.Histogram

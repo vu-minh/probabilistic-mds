@@ -4,16 +4,20 @@ import gzip
 
 from functools import partial
 import numpy as np
+from scipy.sparse.construct import random
 from sklearn import datasets
 from sklearn.utils import shuffle
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
+from sklearn.utils.validation import check_random_state
 
 from plot import generate_stacked_svg
 
 
 DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
+ARTIFICIAL_DATASET = ["swiss_roll"]
+
 ALWAYS_REGENERATE_SVG = True
 
 
@@ -25,20 +29,37 @@ def load_dataset(
     n_samples=None,
     normalize_dists=False,
     missing_pairs=0.0,
+    random_state=42,
 ):
     if dataset_name in DISTANCE_DATASET:
         dists, labels, N = load_distance_dataset(dataset_name, data_dir)
+    elif dataset_name in ARTIFICIAL_DATASET:
+        dists, labels, N = load_artifical_dataset(
+            dataset_name, n_samples, random_state=random_state
+        )
     else:
-        dists, labels, N = load_traditional_dataset(dataset_name, std, pca, n_samples)
+        dists, labels, N = load_traditional_dataset(
+            dataset_name, std, pca, n_samples, random_state
+        )
     if normalize_dists:
         dists /= dists.max()
     if 0.0 < missing_pairs < 1.0:
         n_used = int(len(dists) * (1.0 - missing_pairs))
-        dists = np.random.choice(dists, size=n_used, replace=False)
+        dists = np.random.choice(
+            dists, size=n_used, replace=False, random_state=random_state
+        )
     return dists, labels, N
 
 
-def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
+def load_artifical_dataset(dataset_name, n_samples=100, noise=0.0, random_state=42):
+    load_func = {"swiss_roll": datasets.make_swiss_roll}[dataset_name]
+    X, colors = load_func(n_samples=n_samples, noise=noise, random_state=random_state)
+    return pdist(X, "euclidean"), colors, len(X)
+
+
+def load_traditional_dataset(
+    dataset_name, std=False, pca=None, n_samples=None, random_state=42
+):
     load_func = {
         "iris": datasets.load_iris,
         "wine": datasets.load_wine,
@@ -53,7 +74,7 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
 
     # shuffle dataset, set `n_samples=None` to take all data
     X, labels = shuffle(
-        *load_func(return_X_y=True), n_samples=n_samples, random_state=42
+        *load_func(return_X_y=True), n_samples=n_samples, random_state=random_state
     )
     if dataset_name.startswith(("digits", "mnist", "fashion", "fmnist")):
         image_types = ["gray", "color"]
@@ -139,7 +160,9 @@ def _load_fashion_mnist(path, kind="train"):
     return images, labels
 
 
-def load_fashion_mnist(data_dir="./data", reload=False, classes=None, return_X_y=True):
+def load_fashion_mnist(
+    data_dir="./data", reload=False, classes=None, return_X_y=True, random_state=42
+):
     classes_name = "".join(map(str, classes)) if classes is not None else "all"
     in_name = f"{data_dir}/fmnist_samples_{classes_name}_1K.z"
     print(in_name)
@@ -147,7 +170,12 @@ def load_fashion_mnist(data_dir="./data", reload=False, classes=None, return_X_y
         images, labels = _load_fashion_mnist(path=f"{data_dir}/fashion", kind="train")
         if classes is not None:
             indices = [i for i, lbl in enumerate(labels) if lbl in classes]
-            images, labels = shuffle(images[indices], labels[indices], n_samples=1000)
+            images, labels = shuffle(
+                images[indices],
+                labels[indices],
+                n_samples=1000,
+                random_state=random_state,
+            )
             print(np.unique(labels))
         else:
             images, labels = shuffle(images, labels, n_samples=1000)
@@ -159,8 +187,8 @@ def load_fashion_mnist(data_dir="./data", reload=False, classes=None, return_X_y
 if __name__ == "__main__":
     # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
-    D, labels, N = load_dataset("digits012", data_dir="./data", n_samples=1000)
-    print(labels.shape, D.shape, np.unique(labels))
+    D, labels, N = load_dataset("swiss_roll", data_dir="./data", n_samples=1000)
+    print(labels.shape, D.shape, np.unique(labels)[:20])
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)
     # print(X_train.shape, X_train.min(), X_train.max())
