@@ -28,14 +28,12 @@ def get_image_elem(dataset_name, img_id, cmap_type="gray", width="100px"):
 
 
 @lru_cache(maxsize=None)
-def get_embedding(dataset_name, method_name="MAP2"):
+def get_init_embedding(dataset_name, method_name="MAP2"):
     in_name = f"{STATIC_DIR}/{dataset_name}_{method_name}.Z"
     return joblib.load(in_name)
 
 
-def _build_cyto_nodes(dataset_name, cmap_type="gray"):
-    Z, _ = get_embedding(dataset_name)
-    print("Get embedding: ", Z.shape)
+def _build_cyto_nodes(Z, dataset_name, cmap_type="gray"):
     return [
         dict(
             group="nodes",
@@ -52,7 +50,7 @@ def _build_cyto_nodes(dataset_name, cmap_type="gray"):
 
 
 @app.callback(
-    Output("cytoplot", "elements"),
+    [Output("cytoplot", "elements"), Output("embedding-memory", "data")],
     [
         Input("select-dataset", "value"),
         Input("select-cmap", "value"),
@@ -60,29 +58,36 @@ def _build_cyto_nodes(dataset_name, cmap_type="gray"):
     ],
     [
         State("cytoplot", "elements"),
+        State("embedding-memory", "data"),
         State("selected-nodes-memory", "data"),
     ],
 )
-def update_cytoplot(dataset_name, cmap_type, _, current_elems, selected_nodes):
+def update_cytoplot(
+    dataset_name, cmap_type, _, current_nodes, current_embedding, selected_nodes
+):
     # update new function of dash 0.38: callback_context
     ctx = dash.callback_context
     if not ctx.triggered:
         raise PreventUpdate
 
     if None in [dataset_name, cmap_type]:
-        return []
+        return [], None
 
-    # always update new nodes (to update img_size, update position or cmap)
-    nodes = _build_cyto_nodes(dataset_name, cmap_type)
-
-    # get lastest triggered event (note, in the doc, it takes the first elem)
+    # get lastest triggered event (note in the doc, it takes the first elem)
     last_event = ctx.triggered[-1]
     last_btn = last_event["prop_id"].split(".")[0]
-    if last_btn == "btn-submit":
-        Z = run_pmds(fixed_points=selected_nodes)
-        # TODO think to store embedding into "memory storage"
+    if last_btn in ["select-dataset", "select-cmap"]:
+        if current_embedding is None or current_embedding[0] != dataset_name:
+            Z, _ = get_init_embedding(dataset_name)
+            current_embedding = [dataset_name, Z]
+        else:
+            Z = current_embedding[1]
+    elif last_btn == "btn-submit" and selected_nodes is not None:
+        Z = run_pmds(dataset_name, fixed_points=selected_nodes)
+        current_embedding = [dataset_name, Z]
 
-    return nodes
+    nodes = _build_cyto_nodes(Z, dataset_name, cmap_type)
+    return nodes, current_embedding
 
 
 @app.callback(

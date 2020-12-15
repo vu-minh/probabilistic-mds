@@ -78,10 +78,12 @@ debug_layout = html.Pre(
 
 
 ###############################################################################
-# local storage for storing links
+# local storage for storing selected nodes and current embedding
 selected_nodes_storage_memory = dcc.Store(
     id="selected-nodes-memory", storage_type="memory"
 )
+
+embedding_storage_memory = dcc.Store(id="embedding-memory", storage_type="memory")
 
 
 ##############################################################################
@@ -154,7 +156,7 @@ navbar = dbc.Navbar(
 # main app layout
 app.layout = dbc.Container(
     [
-        dbc.Row([navbar, selected_nodes_storage_memory]),
+        dbc.Row([navbar, selected_nodes_storage_memory, embedding_storage_memory]),
         dbc.Row([dbc.Col([cytoplot_layout], md=10), dbc.Col([control_buttons], md=2)]),
         dbc.Row([dbc.Col([debug_layout])]),
     ],
