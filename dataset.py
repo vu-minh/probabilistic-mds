@@ -60,6 +60,7 @@ def load_traditional_dataset(dataset_name, std=False, pca=None, n_samples=None):
         for image_type in image_types:
             image_name = f"./embeddings/{dataset_name}_{image_type}.svg"
             if ALWAYS_REGENERATE_SVG or not os.path.exists(image_name):
+                print("[DEBUG] Dataset generate svg: ", image_name)
                 generate_stacked_svg(
                     image_name, X, labels=None if image_type == "gray" else labels
                 )

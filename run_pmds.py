@@ -112,7 +112,7 @@ def run_pdms(D, N, args, labels=None):
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
     )
 
-    return Z1, Z1_std
+    return Z1, Z1_std, dists_with_indices
 
 
 if __name__ == "__main__":
@@ -166,5 +166,5 @@ if __name__ == "__main__":
         print("Using params: ", args)
     else:
         wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
-    Z1, Z1_std = run_pdms(D, N, args=args, labels=labels)
-    joblib.dump([Z1, Z1_std], f"embeddings/{dataset_name}_{method_name}.Z")
+    Z1, Z1_std, dists_with_indices = run_pdms(D, N, args=args, labels=labels)
+    joblib.dump([Z1, dists_with_indices], f"embeddings/{dataset_name}_{method_name}.Z")
