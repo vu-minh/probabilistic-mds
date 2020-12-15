@@ -41,9 +41,7 @@ additional_cyto_css = []
 # layout components
 
 # INLINE = {"display": "inline-block"}
-buttons_layout = {
-    "btn-submit": ("Update Viz", "secondary"),
-}
+buttons_layout = {"btn-submit": ("Update Viz", "secondary")}
 control_buttons = html.Div(
     [
         dbc.Button(
@@ -62,12 +60,11 @@ control_buttons = html.Div(
 cytoplot_layout = cyto.Cytoscape(
     id="cytoplot",
     layout={"name": "preset", "animate": True, "fit": True},
-    style={"width": "100%", "height": "90vh"},
-    stylesheet=[
-        default_cyto_node_style,
-        default_cyto_selected_node_style,
-    ]
-    + additional_cyto_css,
+    style={"width": "100%", "height": "85vh"},
+    stylesheet=(
+        [default_cyto_node_style, default_cyto_selected_node_style]
+        + additional_cyto_css
+    ),
     elements=[],
     # autoungrabify=True,  # can not move nodes
     # autounselectify=False,  # can select nodes
@@ -82,8 +79,9 @@ debug_layout = html.Pre(
 
 ###############################################################################
 # local storage for storing links
-# links_storage_memory = dcc.Store(id="links-memory", storage_type="memory")
-# links_storage_memory_debug = dcc.Store(id="links-memory-debug", storage_type="memory")
+selected_nodes_storage_memory = dcc.Store(
+    id="selected-nodes-memory", storage_type="memory"
+)
 
 
 ##############################################################################
@@ -122,7 +120,7 @@ option_select_scatter_color = dbc.FormGroup(
     className="mr-3",
 )
 
-slider_select_scatter_zoom_factor = dbc.FormGroup(
+slider_scatter_zoom_factor = dbc.FormGroup(
     [
         dcc.Slider(
             id="slider-img-size",
@@ -139,14 +137,10 @@ slider_select_scatter_zoom_factor = dbc.FormGroup(
 
 data_control_form = dbc.Form([select_dataset_name], inline=True, style={"width": "30%"})
 
-zoom_control_form = dbc.Form(
-    [slider_select_scatter_zoom_factor], style={"width": "30%"}
-)
+zoom_control_form = dbc.Form([slider_scatter_zoom_factor], style={"width": "30%"})
 
 display_control_form = dbc.Form(
-    [
-        option_select_scatter_color,
-    ],
+    [option_select_scatter_color],
     inline=True,
     style={"width": "40%"},
 )
@@ -160,19 +154,9 @@ navbar = dbc.Navbar(
 # main app layout
 app.layout = dbc.Container(
     [
-        dbc.Row(
-            [
-                navbar,
-                # links_storage_memory,
-                # links_storage_memory_debug,
-            ]
-        ),
-        dbc.Row(
-            [
-                dbc.Col([cytoplot_layout], md=10),
-                dbc.Col([control_buttons], md=2),
-            ]
-        ),
+        dbc.Row([navbar, selected_nodes_storage_memory]),
+        dbc.Row([dbc.Col([cytoplot_layout], md=10), dbc.Col([control_buttons], md=2)]),
+        dbc.Row([dbc.Col([debug_layout])]),
     ],
     fluid=True,
 )

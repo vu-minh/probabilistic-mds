@@ -1,8 +1,7 @@
 import json
-from functools import partial, lru_cache
-from itertools import combinations
-
 import joblib
+from functools import lru_cache
+from collections import defaultdict
 
 import dash
 from dash.exceptions import PreventUpdate
@@ -10,8 +9,7 @@ from dash.dependencies import Input, Output, State
 import dash_html_components as html
 
 from server import app
-
-from pmds import pmds_MAP2
+from app_logic import run_pmds
 
 
 STATIC_DIR = "./static"
@@ -58,12 +56,14 @@ def _build_cyto_nodes(dataset_name, cmap_type="gray"):
     [
         Input("select-dataset", "value"),
         Input("select-cmap", "value"),
+        Input("btn-submit", "n_clicks_timestamp"),
     ],
     [
         State("cytoplot", "elements"),
+        State("selected-nodes-memory", "data"),
     ],
 )
-def update_cytoplot(dataset_name, cmap_type, current_elems):
+def update_cytoplot(dataset_name, cmap_type, _, current_elems, selected_nodes):
     # update new function of dash 0.38: callback_context
     ctx = dash.callback_context
     if not ctx.triggered:
@@ -74,14 +74,13 @@ def update_cytoplot(dataset_name, cmap_type, current_elems):
 
     # always update new nodes (to update img_size, update position or cmap)
     nodes = _build_cyto_nodes(dataset_name, cmap_type)
-    edges = []
 
     # get lastest triggered event (note, in the doc, it takes the first elem)
-    # https://dash.plot.ly/faqs
-    # we can also access to `ctx.stages` and `ctx.inputs`
     last_event = ctx.triggered[-1]
     last_btn = last_event["prop_id"].split(".")[0]
-    print("Last button: ", last_btn)
+    if last_btn == "btn-submit":
+        Z = run_pmds(fixed_points=selected_nodes)
+        # TODO think to store embedding into "memory storage"
 
     return nodes
 
@@ -106,3 +105,20 @@ def change_cyto_style(img_size, current_styles):
                 style["style"]["height"] = scaled_size
                 style["style"]["border-width"] = 0.1 * scaled_size
     return style_list
+
+
+@app.callback(
+    [Output("txt-debug", "children"), Output("selected-nodes-memory", "data")],
+    Input("cytoplot", "tapNode"),
+    State("selected-nodes-memory", "data"),
+)
+def store_moved_nodes(tap_node, selected_nodes):
+    if tap_node is None:
+        return "No tap node", defaultdict(list)
+
+    node_id = tap_node["data"]["id"]
+    pos = tap_node["position"]
+    debug_info = f"TAP: {node_id} @ {pos}"
+    selected_nodes[node_id] = [pos["x"], pos["y"]]
+    print("SELECTED NODES: ", selected_nodes)
+    return debug_info, selected_nodes
