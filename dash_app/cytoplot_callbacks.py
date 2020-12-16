@@ -57,14 +57,11 @@ def _build_cyto_nodes(Z, dataset_name, cmap_type="gray"):
         Input("btn-submit", "n_clicks_timestamp"),
     ],
     [
-        State("cytoplot", "elements"),
         State("embedding-memory", "data"),
         State("selected-nodes-memory", "data"),
     ],
 )
-def update_cytoplot(
-    dataset_name, cmap_type, _, current_nodes, current_embedding, selected_nodes
-):
+def update_cytoplot(dataset_name, cmap_type, _, current_embedding, selected_nodes):
     # update new function of dash 0.38: callback_context
     ctx = dash.callback_context
     if not ctx.triggered:
@@ -76,15 +73,20 @@ def update_cytoplot(
     # get lastest triggered event (note in the doc, it takes the first elem)
     last_event = ctx.triggered[-1]
     last_btn = last_event["prop_id"].split(".")[0]
+
     if last_btn in ["select-dataset", "select-cmap"]:
+        # simple update cytoplot
         if current_embedding is None or current_embedding[0] != dataset_name:
             Z, _ = get_init_embedding(dataset_name)
             current_embedding = [dataset_name, Z]
         else:
             Z = current_embedding[1]
     elif last_btn == "btn-submit" and selected_nodes is not None:
-        Z = run_pmds(dataset_name, fixed_points=selected_nodes)
+        # update viz using user's fixed points
+        Z = run_pmds(dataset_name, current_embedding[1], fixed_points=selected_nodes)
         current_embedding = [dataset_name, Z]
+    else:
+        raise ValueError("[DASH APP] Unexpected event: ", last_btn)
 
     nodes = _build_cyto_nodes(Z, dataset_name, cmap_type)
     return nodes, current_embedding
@@ -121,9 +123,12 @@ def store_moved_nodes(tap_node, selected_nodes):
     if tap_node is None:
         return "No tap node", defaultdict(list)
 
-    node_id = tap_node["data"]["id"]
-    pos = tap_node["position"]
-    debug_info = f"TAP: {node_id} @ {pos}"
+    # store selected nodes in a dict, keyed by "id" which is str type
+    node_id, pos = tap_node["data"]["id"], tap_node["position"]
     selected_nodes[node_id] = [pos["x"], pos["y"]]
+
+    debug_info = f"TAP: {node_id} @ {pos}\n"
+    debug_info += json.dumps(selected_nodes, indent=2)
     print("SELECTED NODES: ", selected_nodes)
+
     return debug_info, selected_nodes

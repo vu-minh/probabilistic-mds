@@ -81,10 +81,11 @@ def pmds_MAP2(
     # local variance for each point
     sigma_local = jnp.ones((2, 1)) * sigma_local
 
-    key_mu, _ = jax.random.split(jax.random.PRNGKey(random_state))
-    if init_mu is not None and init_mu.shape == (n_samples, n_components):
+    if init_mu is not None:
         mu = jnp.array(init_mu)
+        assert mu.shape == (n_samples, n_components)
     else:
+        key_mu, _ = jax.random.split(jax.random.PRNGKey(random_state))
         mu = jax.random.normal(key_mu, (n_samples, n_components))
         # mu = jnp.zeros((n_samples, 2))
 
@@ -103,7 +104,7 @@ def pmds_MAP2(
     loss = 0.0
     total_time = 0
     all_loss = []
-    mds_stress = sammon_err = 0.0
+    mds_stress = sammon_err = -1.0
 
     for epoch in range(epochs):
         tic = time()

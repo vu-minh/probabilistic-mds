@@ -8,7 +8,15 @@ from server import app
 import cytoplot_callbacks
 
 
-list_datasets = ["digits012", "fmnist", "fmnist_subset"]
+TRADITIONAL_DATASET = ["digits012", "fmnist", "fmnist_subset"]
+DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
+ARTIFICIAL_DATASET = (
+    ["swiss_roll", "swiss_roll_noise"]
+    + ["s_curve", "s_curve_noise"]
+    + ["sphere", "sphere_noise"]
+)
+
+list_datasets = TRADITIONAL_DATASET + DISTANCE_DATASET + ARTIFICIAL_DATASET
 
 ###############################################################################
 # cytoscape stylesheet
@@ -96,7 +104,7 @@ select_dataset_name = dbc.FormGroup(
             id="select-dataset",
             value=None,
             options=[{"label": name, "value": name} for name in list_datasets],
-            style={"width": "160px"},
+            style={"width": "200px"},
         ),
     ],
     className="mr-3",
@@ -157,8 +165,18 @@ navbar = dbc.Navbar(
 app.layout = dbc.Container(
     [
         dbc.Row([navbar, selected_nodes_storage_memory, embedding_storage_memory]),
-        dbc.Row([dbc.Col([cytoplot_layout], md=10), dbc.Col([control_buttons], md=2)]),
-        dbc.Row([dbc.Col([debug_layout])]),
+        dbc.Row(
+            [
+                dbc.Col([cytoplot_layout], md=10),
+                dbc.Col(
+                    [
+                        dbc.Row([dbc.Col([control_buttons])]),
+                        dbc.Row([dbc.Col([debug_layout])]),
+                    ],
+                    md=2,
+                ),
+            ]
+        ),
     ],
     fluid=True,
 )
