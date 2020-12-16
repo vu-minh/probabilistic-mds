@@ -13,6 +13,7 @@ from app_logic import run_pmds
 
 
 STATIC_DIR = "./static"
+IMAGE_DATASETS = ("digits", "fmnist")
 
 
 def get_image_url(dataset_name, img_id, cmap_type="gray"):
@@ -33,18 +34,41 @@ def get_init_embedding(dataset_name, method_name="MAP2"):
     return joblib.load(in_name)
 
 
+@lru_cache(maxsize=None)
+def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type):
+    return dict(
+        group="nodes",
+        classes="img-node",
+        data=dict(
+            id=str(idx),
+            label=f"node_{idx}",
+            url=get_image_url(dataset_name, idx, cmap_type),
+        ),
+        position=dict(x=x, y=y),
+    )
+
+
+@lru_cache(maxsize=None)
+def _build_cyto_node_with_label(idx, x, y, dataset_name, cmap_type=None):
+    return dict(
+        group="nodes",
+        classes="normal-node",
+        data=dict(
+            id=str(idx),
+            label=f"node_{idx}",
+        ),
+        position=dict(x=x, y=y),
+    )
+
+
 def _build_cyto_nodes(Z, dataset_name, cmap_type="gray"):
+    if dataset_name.startswith(IMAGE_DATASETS):
+        build_node_func = _build_cyto_node_image
+    else:
+        build_node_func = _build_cyto_node_with_label
+
     return [
-        dict(
-            group="nodes",
-            classes="img-node",
-            data=dict(
-                id=str(idx),
-                label=f"node_{idx}",
-                url=get_image_url(dataset_name, idx, cmap_type),
-            ),
-            position=dict(x=x, y=y),
-        )
+        build_node_func(idx, x, y, dataset_name, cmap_type)
         for idx, [x, y] in enumerate(Z)
     ]
 

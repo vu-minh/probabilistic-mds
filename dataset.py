@@ -57,9 +57,9 @@ def load_dataset(
 
 def load_artifical_dataset(dataset_name, n_samples=100, noise=0.05, random_state=42):
     load_func = {
-        "swiss_roll": datasets.make_swiss_roll,
+        "swiss_roll": partial(datasets.make_swiss_roll, noise=0.0),
         "swiss_roll_noise": partial(datasets.make_swiss_roll, noise=noise),
-        "s_curve": datasets.make_s_curve,
+        "s_curve": partial(datasets.make_s_curve, noise=0.0),
         "s_curve_noise": partial(datasets.make_s_curve, noise=noise),
         "sphere": make_sphere,
         "sphere_noise": partial(make_sphere, noise=noise),

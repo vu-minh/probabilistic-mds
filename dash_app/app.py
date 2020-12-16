@@ -21,7 +21,7 @@ list_datasets = TRADITIONAL_DATASET + DISTANCE_DATASET + ARTIFICIAL_DATASET
 ###############################################################################
 # cytoscape stylesheet
 # ref for cytospace js style: http://js.cytoscape.org/
-default_cyto_node_style = dict(
+default_cyto_image_node_style = dict(
     selector=".img-node",
     style={
         "width": 0.04,
@@ -32,6 +32,18 @@ default_cyto_node_style = dict(
         "background-color": "white",
         "background-fit": ["contain", "cover"][0],
         "background-image": "data(url)",
+    },
+)
+
+default_cyto_normal_node_style = dict(
+    selector="normal-node",
+    style={
+        "width": 0.03,
+        "height": 0.03,
+        "shape": "ellipse",
+        # "border-color": "blue",
+        "overlay-opacity": 0.0,
+        "background-color": "yellow",
     },
 )
 
@@ -68,12 +80,18 @@ control_buttons = html.Div(
 cytoplot_layout = cyto.Cytoscape(
     id="cytoplot",
     layout={"name": "preset", "animate": True, "fit": True},
-    style={"width": "100%", "height": "85vh"},
+    style={"width": "100%", "height": "90vh"},
     stylesheet=(
-        [default_cyto_node_style, default_cyto_selected_node_style]
+        [
+            default_cyto_image_node_style,
+            default_cyto_normal_node_style,
+            default_cyto_selected_node_style,
+        ]
         + additional_cyto_css
     ),
     elements=[],
+    # zoom=1.5,
+    # boxSelectionEnabled=True,
     # autoungrabify=True,  # can not move nodes
     # autounselectify=False,  # can select nodes
 )

@@ -12,10 +12,10 @@ DEFAULT_CONFIG = dict(
     n_components=2,
     batch_size=0,
     epochs=100,
-    learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
-    sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+    learning_rate=2e-10,
+    sigma_local=1e-3,
     # missing_pairs=0.0,
-    sigma_fix=1e-3,
+    sigma_fix=1e-1,
 )
 
 CONFIG = {
@@ -115,11 +115,6 @@ def run_pmds(dataset_name, current_Z=None, fixed_points=[], sigma_fix=1e-5):
     input_embedding_name = f"{STATIC_DIR}/{dataset_name}_MAP2.Z"
     Z_init, input_dists_with_indices = joblib.load(input_embedding_name)
     print("[DASH APP] Get embedding: ", Z_init.shape, len(input_dists_with_indices))
-
-    # debug new position of fixed points
-    for i, p in enumerate(Z_init):
-        if str(i) in fixed_points.keys():
-            print(i, fixed_points[str(i)], p)
 
     args = argparse.Namespace(**CONFIG.get(dataset_name, DEFAULT_CONFIG))
     print("[DASH APP] Using config: ", args)

@@ -42,6 +42,8 @@ def run_pdms(D, N, args, labels=None):
         dissimilarity="precomputed",
         metric=True,
         random_state=args.random_state,
+        n_init=10,
+        n_jobs=-1,
         verbose=1,
     ).fit_transform(D_squareform)
 
