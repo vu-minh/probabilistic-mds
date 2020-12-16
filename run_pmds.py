@@ -77,7 +77,8 @@ def run_pdms(D, N, args, labels=None):
         random_state=args.random_state + 1,
         debug_D_squareform=D_squareform,
         fixed_points=vars(args).get("fixed_points", []),
-        sigma_local=vars(args).get("sigma_local", 1e-3)
+        sigma_local=vars(args).get("sigma_local", 1e-3),
+        sigma_fix=vars(args).get("sigma_fix", 1e-3),
         # init_mu=Z0,
     )
 
@@ -112,6 +113,9 @@ def run_pdms(D, N, args, labels=None):
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
     )
 
+    if args.interactive:
+        plot.scatter_plotly(Z1, labels, out_name=f"{plot_dir}/Z.html")
+
     return Z1, Z1_std, dists_with_indices
 
 
@@ -137,6 +141,7 @@ if __name__ == "__main__":
     argm("--batch_size", "-b", default=0, type=int, help="Batch size SGD")
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
     argm("--no_logging", action="store_true", help="Disable W&B / MLFlow logging")
+    argm("--interactive", action="store_true", help="Using plotly for interactive")
 
     args = vars(parser.parse_args())
     dataset_name = args["dataset_name"]
@@ -161,6 +166,7 @@ if __name__ == "__main__":
         n_samples=args.n_samples,
         normalize_dists=args.normalize_dists,
     )
+    print("[PMDS] Load dataset: ", N, D.shape)
 
     if args.no_logging:
         print("Using params: ", args)

@@ -6,17 +6,21 @@ from functools import partial
 import numpy as np
 from scipy.sparse.construct import random
 from sklearn import datasets
-from sklearn.utils import shuffle
+from sklearn.utils import shuffle, check_random_state
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import pdist, squareform
-from sklearn.utils.validation import check_random_state
 
 from plot import generate_stacked_svg
 
 
 DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
-ARTIFICIAL_DATASET = ["swiss_roll"]
+ARTIFICIAL_DATASET = (
+    ["swiss_roll", "swiss_roll_noise"]
+    + ["s_curve", "s_curve_noise"]
+    + ["sphere", "sphere_noise"]
+)
+
 
 ALWAYS_REGENERATE_SVG = True
 
@@ -51,10 +55,38 @@ def load_dataset(
     return dists, labels, N
 
 
-def load_artifical_dataset(dataset_name, n_samples=100, noise=0.0, random_state=42):
-    load_func = {"swiss_roll": datasets.make_swiss_roll}[dataset_name]
-    X, colors = load_func(n_samples=n_samples, noise=noise, random_state=random_state)
+def load_artifical_dataset(dataset_name, n_samples=100, noise=0.05, random_state=42):
+    load_func = {
+        "swiss_roll": datasets.make_swiss_roll,
+        "swiss_roll_noise": partial(datasets.make_swiss_roll, noise=noise),
+        "s_curve": datasets.make_s_curve,
+        "s_curve_noise": partial(datasets.make_s_curve, noise=noise),
+        "sphere": make_sphere,
+        "sphere_noise": partial(make_sphere, noise=noise),
+    }[dataset_name]
+    X, colors = load_func(n_samples=n_samples, random_state=random_state)
     return pdist(X, "euclidean"), colors, len(X)
+
+
+def make_sphere(n_samples=100, *, noise=0.0, random_state=None):
+    # https://github.com/scikit-learn/scikit-learn/blob/0fb307bf3/sklearn/datasets/_samples_generator.py#L1444
+    # https://scikit-learn.org/stable/auto_examples/manifold/plot_manifold_sphere.html#sphx-glr-auto-examples-manifold-plot-manifold-sphere-py
+    random_state = check_random_state(random_state)
+    p = random_state.rand(n_samples) * (2 * np.pi - 0.55)
+    t = random_state.rand(n_samples) * np.pi
+
+    # Sever the poles from the sphere.
+    indices = (t < (np.pi - (np.pi / 8))) & (t > ((np.pi / 8)))
+    colors = p[indices]
+    x, y, z = (
+        np.sin(t[indices]) * np.cos(p[indices]),
+        np.sin(t[indices]) * np.sin(p[indices]),
+        np.cos(t[indices]),
+    )
+
+    X = np.array([x, y, z]).T
+    X += noise * random_state.randn(*X.shape)
+    return X, colors
 
 
 def load_traditional_dataset(
@@ -187,7 +219,7 @@ def load_fashion_mnist(
 if __name__ == "__main__":
     # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
-    D, labels, N = load_dataset("swiss_roll", data_dir="./data", n_samples=1000)
+    D, labels, N = load_dataset("sphere_noise", data_dir="./data", n_samples=1000)
     print(labels.shape, D.shape, np.unique(labels)[:20])
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)

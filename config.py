@@ -556,13 +556,8 @@ pre_config = {
             std=False,
             pca=None,
             fixed_points=[
-                # (0, 0.5, 2.0),  # New York
-                # (6, -0.5, 2.0),  # Olympia
-                # TODO test with only one moving point for Olympia
-                # (0, 0.4, 0.3),
-                # (6, -0.4, 0.2),
-                # (2, -0.4, 0.1),  # los angles
-                # (6, 0.0, -0.4),
+                (0, [0.5, 2.0]),  # New York
+                (6, [-0.5, 2.0]),  # Olympia
             ],
             ### params for MDS-jax
             # epochs_mds=10,
@@ -586,15 +581,28 @@ pre_config = {
         ),
         "qpcr": dict(
             dataset_name="qpcr",
-            n_samples=200,  # 437,
+            n_samples=None,  # 437, -- always load all data points
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=1e-8,
+            learning_rate=2.5e-9,  # 2e-8,
             sigma_local=1e-3,
+            sigma_fix=1e-3,
             random_state=42,
             std=False,
             pca=None,
+            fixed_points=[
+                (1, [-0.75, 1.5]),  # '1' (0)
+                (19, [-0.4, 1.25]),  # '2' (1)
+                (24, [-0.2, 0.75]),  # '4' (2)
+                (86, [0.0, 0.0]),  # '8' (3)
+                (114, [0.2, 0.0]),  # '16' (4)
+                (222, [0.75, -1.0]),  # '32TE' (5)
+                (204, [0.5, 1.2]),  # '32ICM' (6)
+                (286, [1.2, 0.5]),  # '64PE' (7)
+                (344, [1.0, -1.0]),  # '64TE' (8)
+                (417, [1.2, 2.0]),  # '64EPI' (9)
+            ],
         ),
         "iris": dict(
             dataset_name="iris",
@@ -630,14 +638,72 @@ pre_config = {
             sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
             # missing_pairs=0.0,
             random_state=42,
+            fixed_points=[
+                # (0, -1.0, -1.0),
+            ],
+        ),
+        "swiss_roll_noise": dict(
+            dataset_name="swiss_roll_noise",
+            n_samples=150,
+            n_components=2,
+            batch_size=0,
+            epochs=1000,
+            ### for 300 points
+            # learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
+            # sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            # missing_pairs=0.0,
+            learning_rate=8.5e-10,  # 1e-7
+            sigma_local=1e-3,
+            random_state=42,
+            fixed_points=[
+                (21, -0.3, 0),
+                (71, -0.2, 0),
+                (130, -0.1, 0),
+                (8, 0.0, 0.0),
+                (51, 0.1, 0),
+                (80, 0.2, 0),
+                (140, 0.3, 0),
+            ],
+        ),
+        "sphere_noise": dict(
+            dataset_name="sphere_noise",
+            n_samples=100,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
+            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            # missing_pairs=0.0,
+            random_state=42,
+            fixed_points=[],
+        ),
+        "s_curve": dict(
+            dataset_name="s_curve",
+            n_samples=300,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
+            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            # missing_pairs=0.5,
+            random_state=42,
+            fixed_points=[(0, 1.0, 0.0), (149, 0.0, 0.0), (299, -1.0, 0.0)],
+        ),
+        "s_curve_noise": dict(
+            dataset_name="s_curve_noise",
+            n_samples=300,
+            n_components=2,
+            batch_size=0,
+            epochs=100,
+            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
+            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            # missing_pairs=0.0,
+            random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
             fixed_points=[
                 # (0, -1.0, -1.0),
             ],
-            # epochs_mds=30,
-            # learning_rate_mds=80,
-            # batch_size_mds=1000,
         ),
     },
     "MAP3": {

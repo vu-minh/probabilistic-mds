@@ -1,6 +1,9 @@
 # Latent variable Probabilistic MDS
 import random
 from time import time
+from pprint import pprint
+
+from numpy.lib.ufunclike import fix
 
 import wandb
 import jax
@@ -13,7 +16,7 @@ from .score import stress, sammonZ
 
 
 EPSILON = 1e-5
-FIXED_SCALE = 5e-1
+FIXED_SCALE = 1e-3
 DISABLE_LOGGING = True
 
 hist = wandb.Histogram
@@ -65,6 +68,7 @@ def pmds_MAP2(
     method="LV",
     sigma_local=1e-3,
     alpha=None,  # contribution of log prior
+    sigma_fix=None,  # sigma^2_{fix}
 ):
     # can multiply the log prior with factor N
     if alpha is None:
@@ -84,14 +88,17 @@ def pmds_MAP2(
         mu = jax.random.normal(key_mu, (n_samples, n_components))
         # mu = jnp.zeros((n_samples, 2))
 
-    # fixed points
+    # set prior for fixed points
     if fixed_points:
-        fixed_indices = jnp.array([p[0] for p in fixed_points])
-        fixed_pos = jnp.array([[p[1], p[2]] for p in fixed_points])
+        sigma_fix = sigma_fix or FIXED_SCALE
+        fixed_indices, fixed_pos = map(jnp.array, zip(*fixed_points))
+
         mu0 = jax.ops.index_update(mu0, fixed_indices, fixed_pos)
         sigma0 = jax.ops.index_update(
-            sigma0, fixed_indices, FIXED_SCALE * sigma0[fixed_indices]
+            sigma0, fixed_indices, sigma_fix * sigma0[fixed_indices]
         )
+        print("[PMDS-MAP2] Fixed points: ")
+        pprint(fixed_points)
 
     loss = 0.0
     total_time = 0
@@ -115,10 +122,11 @@ def pmds_MAP2(
 
         if debug_D_squareform is not None:
             mds_stress = stress(debug_D_squareform, mu)
-            sammon_err = sammonZ(debug_D_squareform, mu)
+            # sammon_err = sammonZ(debug_D_squareform, mu)
         print(
             f"[DEBUG] epoch {epoch}, loss: {-loss:,.2f},"
-            f" stress: {mds_stress:,.2f}, sammon: {sammon_err:,.2f}, "
+            f" stress: {mds_stress:,.2f}, "
+            # f" sammon: {sammon_err:,.2f}, "
             f" in {(time() - tic):.2f}s"
         )
         total_time += time() - tic

@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgb
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 def line(points, out_name="line.png"):
@@ -82,8 +84,18 @@ def scatter(Z, Z_std=None, labels=None, title="", ax=None, out_name="Z.png"):
         fig.savefig(out_name, bbox_inches="tight", transparent=True)
 
 
-def scatter_with_images():
-    ...
+def scatter_plotly(Z, labels, out_name="Z.html"):
+    fig = px.scatter(
+        x=Z[:, 0],
+        y=Z[:, 1],
+        color=labels,
+        hover_name=np.arange(len(Z)),
+        color_continuous_scale="jet",
+        template="simple_white",
+        width=700,
+        height=600,
+    )
+    fig.write_html(out_name)
 
 
 def compare_scatter(Z0, Z1, Z0_vars, Z1_vars, labels, titles, out_name="compare.png"):
