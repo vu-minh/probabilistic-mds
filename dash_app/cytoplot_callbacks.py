@@ -1,8 +1,9 @@
 import json
 import joblib
-from functools import lru_cache
+from functools import lru_cache, partial
 from collections import defaultdict
 
+import numpy as np
 import dash
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State
@@ -14,6 +15,12 @@ from app_logic import run_pmds
 
 STATIC_DIR = "./static"
 IMAGE_DATASETS = ("digits", "fmnist")
+TABULAR_DATASETS = ()
+ARTIFICIAL_DATASET = (
+    ["swiss_roll", "swiss_roll_noise"]
+    + ["s_curve", "s_curve_noise"]
+    + ["sphere", "sphere_noise"]
+)
 
 
 def get_image_url(dataset_name, img_id, cmap_type="gray"):
@@ -35,13 +42,14 @@ def get_init_embedding(dataset_name, method_name="MAP2"):
 
 
 @lru_cache(maxsize=None)
-def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type):
+def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type, color):
     return dict(
         group="nodes",
         classes="img-node",
         data=dict(
             id=str(idx),
             label=f"node_{idx}",
+            color=color,
             url=get_image_url(dataset_name, idx, cmap_type),
         ),
         position=dict(x=x, y=y),
@@ -49,27 +57,61 @@ def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type):
 
 
 @lru_cache(maxsize=None)
-def _build_cyto_node_with_label(idx, x, y, dataset_name, cmap_type=None):
+def _build_cyto_node_with_label(idx, x, y, dataset_name, cmap_type, color):
     return dict(
         group="nodes",
-        classes="normal-node",
-        data=dict(
-            id=str(idx),
-            label=f"node_{idx}",
-        ),
+        classes="label-node",
+        data=dict(id=str(idx), label=f"node_{idx}", color=color),
         position=dict(x=x, y=y),
     )
 
 
-def _build_cyto_nodes(Z, dataset_name, cmap_type="gray"):
+@lru_cache(maxsize=None)
+def _build_cyto_node_normal(idx, x, y, dataset_name, cmap_type, color):
+    return dict(
+        group="nodes",
+        classes="normal-node",
+        data=dict(id=str(idx), color=color),
+        position=dict(x=x, y=y),
+    )
+
+
+def _gen_color_from_label(labels, dataset_name, cmap_type="jet"):
+    # import matplotlib as mpl
+    # import matplotlib.cm as cm
+    from matplotlib.colors import rgb2hex
+    from matplotlib.cm import get_cmap
+
+    if dataset_name in ARTIFICIAL_DATASET or len(np.unique(labels)) > 10:
+        cmap_type = "jet"
+    else:
+        cmap_type = "tab10"
+
+    # my_cmap = cm.ScalarMappable(
+    #     norm=mpl.colors.Normalize(vmin=0, vmax=1), cmap=cmap_type
+    # )
+    # return list(map(my_cmap.to_rgba, labels))
+
+    cmap = get_cmap(cmap_type)
+    labels = np.array(labels) / np.max(labels)
+    return list(map(lambda lbl: rgb2hex(cmap(lbl)), labels))
+
+
+def _build_cyto_nodes(dataset_name, Z, labels=None, cmap_type="gray"):
+    # build different node types according to `dataset_name`
     if dataset_name.startswith(IMAGE_DATASETS):
         build_node_func = _build_cyto_node_image
-    else:
+    elif dataset_name.startswith(TABULAR_DATASETS):
         build_node_func = _build_cyto_node_with_label
+    else:
+        build_node_func = _build_cyto_node_normal
 
+    # gen color for each node from labels
+    labels = range(len(Z)) if labels is None else labels
+    colors = _gen_color_from_label(labels, dataset_name, cmap_type)
     return [
-        build_node_func(idx, x, y, dataset_name, cmap_type)
-        for idx, [x, y] in enumerate(Z)
+        build_node_func(idx, x, y, dataset_name, cmap_type, color)
+        for idx, ([x, y], color) in enumerate(zip(Z, colors))
     ]
 
 
@@ -101,18 +143,21 @@ def update_cytoplot(dataset_name, cmap_type, _, current_embedding, selected_node
     if last_btn in ["select-dataset", "select-cmap"]:
         # simple update cytoplot
         if current_embedding is None or current_embedding[0] != dataset_name:
-            Z, _ = get_init_embedding(dataset_name)
-            current_embedding = [dataset_name, Z]
-        else:
-            Z = current_embedding[1]
-    elif last_btn == "btn-submit" and selected_nodes is not None:
+            Z, _, labels = get_init_embedding(dataset_name)
+            current_embedding = [dataset_name, Z, labels]
+    elif (
+        last_btn == "btn-submit"
+        and selected_nodes is not None
+        and current_embedding is None
+    ):
         # update viz using user's fixed points
         Z = run_pmds(dataset_name, current_embedding[1], fixed_points=selected_nodes)
-        current_embedding = [dataset_name, Z]
+        current_embedding[1] = Z
     else:
-        raise ValueError("[DASH APP] Unexpected event: ", last_btn)
+        print("[DASH APP] Unexpected event: ", last_btn)
+        return [], None
 
-    nodes = _build_cyto_nodes(Z, dataset_name, cmap_type)
+    nodes = _build_cyto_nodes(*current_embedding, cmap_type)
     return nodes, current_embedding
 
 

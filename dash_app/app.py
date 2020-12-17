@@ -29,7 +29,7 @@ default_cyto_image_node_style = dict(
         "shape": ["rectangle", "ellipse"][0],
         "border-color": "white",
         "overlay-opacity": 0.0,
-        "background-color": "white",
+        "background-color": "data(color)",
         "background-fit": ["contain", "cover"][0],
         "background-image": "data(url)",
     },
@@ -41,9 +41,8 @@ default_cyto_normal_node_style = dict(
         "width": 0.03,
         "height": 0.03,
         "shape": "ellipse",
-        # "border-color": "blue",
         "overlay-opacity": 0.0,
-        "background-color": "yellow",
+        "background-color": "data(color)",
     },
 )
 

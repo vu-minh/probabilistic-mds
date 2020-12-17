@@ -61,7 +61,7 @@ def load_artifical_dataset(dataset_name, n_samples=100, noise=0.05, random_state
         "swiss_roll_noise": partial(datasets.make_swiss_roll, noise=noise),
         "s_curve": partial(datasets.make_s_curve, noise=0.0),
         "s_curve_noise": partial(datasets.make_s_curve, noise=noise),
-        "sphere": make_sphere,
+        "sphere": partial(make_sphere, noise=0.0),
         "sphere_noise": partial(make_sphere, noise=noise),
     }[dataset_name]
     X, colors = load_func(n_samples=n_samples, random_state=random_state)

@@ -634,8 +634,10 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 2e-7][2],
-            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            learning_rate=1e-8,
+            sigma_local=1e-3,
+            # learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 2e-7][2],
+            # sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
             # missing_pairs=0.0,
             random_state=2021,
             fixed_points=[
@@ -687,7 +689,11 @@ pre_config = {
             sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
             # missing_pairs=0.5,
             random_state=42,
-            fixed_points=[(0, 1.0, 0.0), (149, 0.0, 0.0), (299, -1.0, 0.0)],
+            fixed_points=[
+                # (0, [1.0, 0.0]),
+                # (149, [0.0, 0.0]),
+                # (299, [-1.0, 0.0]),
+            ],
         ),
         "s_curve_noise": dict(
             dataset_name="s_curve_noise",
