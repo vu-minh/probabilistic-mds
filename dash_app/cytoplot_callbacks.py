@@ -4,6 +4,8 @@ from functools import lru_cache, partial
 from collections import defaultdict
 
 import numpy as np
+from matplotlib import pyplot as plt
+
 import dash
 from dash.exceptions import PreventUpdate
 from dash.dependencies import Input, Output, State
@@ -35,7 +37,6 @@ def get_image_elem(dataset_name, img_id, cmap_type="gray", width="100px"):
     )
 
 
-@lru_cache(maxsize=None)
 def get_init_embedding(dataset_name, method_name="MAP2"):
     in_name = f"{STATIC_DIR}/{dataset_name}_{method_name}.Z"
     return joblib.load(in_name)
@@ -77,24 +78,24 @@ def _build_cyto_node_normal(idx, x, y, dataset_name, cmap_type, color):
 
 
 def _gen_color_from_label(labels, dataset_name, cmap_type="jet"):
-    # import matplotlib as mpl
-    # import matplotlib.cm as cm
-    from matplotlib.colors import rgb2hex
+    import matplotlib as mpl
+    import matplotlib.cm as cm
+    from matplotlib.colors import rgb2hex, to_hex
     from matplotlib.cm import get_cmap
 
     if dataset_name in ARTIFICIAL_DATASET or len(np.unique(labels)) > 10:
-        cmap_type = "jet"
+        cmap_type = "Spectral"
     else:
         cmap_type = "tab10"
 
     # my_cmap = cm.ScalarMappable(
-    #     norm=mpl.colors.Normalize(vmin=0, vmax=1), cmap=cmap_type
+    #     norm=mpl.colors.Normalize(vmin=0.0, vmax=1.0), cmap=cmap_type
     # )
     # return list(map(my_cmap.to_rgba, labels))
 
     cmap = get_cmap(cmap_type)
     labels = np.array(labels) / np.max(labels)
-    return list(map(lambda lbl: rgb2hex(cmap(lbl)), labels))
+    return list(map(lambda lbl: to_hex(cm.Spectral(lbl)), labels))
 
 
 def _build_cyto_nodes(dataset_name, Z, labels=None, cmap_type="gray"):
@@ -109,10 +110,43 @@ def _build_cyto_nodes(dataset_name, Z, labels=None, cmap_type="gray"):
     # gen color for each node from labels
     labels = range(len(Z)) if labels is None else labels
     colors = _gen_color_from_label(labels, dataset_name, cmap_type)
+
+    # # test color map
+    # import matplotlib as mpl
+    # import matplotlib.cm as cm
+
+    # fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 5))
+    # norm = mpl.colors.Normalize(vmin=-1, vmax=1)
+    # ax0.scatter(*Z.T, c=labels, cmap=cm.Spectral, norm=norm)
+    # ax1.scatter(*Z.T, c=cm.Spectral(np.array(labels) / np.max(labels)))
+    # fig.savefig("test-cmap.png")
+
+    # NOTE cytospace coordinate (0, 0) is top-left
     return [
-        build_node_func(idx, x, y, dataset_name, cmap_type, color)
+        build_node_func(idx, x, -y, dataset_name, cmap_type, color)
         for idx, ([x, y], color) in enumerate(zip(Z, colors))
     ]
+
+
+def debug_embedding(old_Z, new_Z, selected_points=[], colors=None):
+    print("Plot debug selected points: ", selected_points)
+    fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 5))
+
+    Z0 = old_Z[selected_points, :]
+    Z1 = new_Z[selected_points, :]
+
+    ax0.set_aspect("equal")
+    ax0.scatter(*old_Z.T, c=colors)
+    ax0.scatter(x=Z0[:, 0], y=Z0[:, 1], marker="+", s=128)
+    ax0.scatter(x=Z1[:, 0], y=Z1[:, 1], marker="o", s=128, alpha=0.3)
+
+    ax1.set_aspect("equal")
+    ax1.scatter(*new_Z.T, c=colors)
+    ax1.scatter(*old_Z.T, c=None, alpha=0.05)
+    ax1.scatter(x=Z0[:, 0], y=Z0[:, 1], marker="o", s=128, alpha=0.3)
+    ax1.scatter(x=Z1[:, 0], y=Z1[:, 1], marker="+", s=128)
+
+    fig.savefig("test_Z.png")
 
 
 @app.callback(
@@ -147,12 +181,20 @@ def update_cytoplot(dataset_name, cmap_type, _, current_embedding, selected_node
             current_embedding = [dataset_name, Z, labels]
     elif (
         last_btn == "btn-submit"
-        and selected_nodes is not None
-        and current_embedding is None
+        # and selected_nodes is not None
+        and current_embedding is not None
     ):
         # update viz using user's fixed points
-        Z = run_pmds(dataset_name, current_embedding[1], fixed_points=selected_nodes)
+        selected_nodes = selected_nodes or dict()
+        _, old_embedding, labels = current_embedding
+        Z = run_pmds(dataset_name, old_embedding, fixed_points=selected_nodes)
         current_embedding[1] = Z
+        debug_embedding(
+            old_Z=np.array(old_embedding),
+            new_Z=np.array(Z),
+            selected_points=list(map(int, selected_nodes.keys())),
+            colors=_gen_color_from_label(labels, dataset_name),
+        )
     else:
         print("[DASH APP] Unexpected event: ", last_btn)
         return [], None

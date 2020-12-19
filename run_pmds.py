@@ -1,4 +1,4 @@
-# import numpy as np
+import json
 import random
 from itertools import combinations
 import wandb
@@ -69,6 +69,14 @@ def run_pdms(D, N, args, labels=None):
         "MAP2": pmds_MAP2,  # not use log sigma (uniform for sigma)
         "MAP3": pmds_MAP3,  # for testing/debugging log llh + log prior
     }[args.method_name]
+
+    fixed_points = vars(args).get("fixed_points", [])
+    if type(fixed_points) == str:
+        with open(fixed_points, "r") as in_file:
+            fixed_points = json.load(in_file)
+    if type(fixed_points) == dict:
+        fixed_points = [(int(idx), [x, y]) for idx, [x, y] in fixed_points.items()]
+
     Z1, Z1_std, all_losses, all_mu = pmds_method(
         dists_with_indices,
         n_samples=N,
@@ -78,7 +86,7 @@ def run_pdms(D, N, args, labels=None):
         lr=args.learning_rate,
         random_state=args.random_state + 1,
         debug_D_squareform=D_squareform,
-        fixed_points=vars(args).get("fixed_points", []),
+        fixed_points=fixed_points,
         sigma_local=vars(args).get("sigma_local", 1e-3),
         sigma_fix=vars(args).get("sigma_fix", 1e-3),
         # init_mu=Z0,

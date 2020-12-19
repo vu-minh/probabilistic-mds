@@ -92,14 +92,14 @@ def pmds_MAP2(
     # set prior for fixed points
     if fixed_points:
         sigma_fix = sigma_fix or FIXED_SCALE
-        fixed_indices, fixed_pos = map(jnp.array, zip(*fixed_points))
+        print(f"[PMDS MAP2] using figma_fix={sigma_fix} with fixed points: ")
+        pprint(fixed_points)
 
+        fixed_indices, fixed_pos = map(jnp.array, zip(*fixed_points))
         mu0 = jax.ops.index_update(mu0, fixed_indices, fixed_pos)
         sigma0 = jax.ops.index_update(
             sigma0, fixed_indices, sigma_fix * sigma0[fixed_indices]
         )
-        print("[PMDS-MAP2] Fixed points: ")
-        pprint(fixed_points)
 
     loss = 0.0
     total_time = 0
