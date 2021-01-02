@@ -1,9 +1,8 @@
 # Latent variable Probabilistic MDS
 import random
 from time import time
+from functools import partial
 from pprint import pprint
-
-from numpy.lib.ufunclike import fix
 
 import wandb
 import jax
@@ -11,6 +10,7 @@ import jax.numpy as jnp
 import numpy as np
 from jax.scipy.special import i0e
 from jax.scipy.stats import multivariate_normal
+from jax.experimental.optimizers import adam
 
 from .score import stress, sammonZ
 
@@ -35,7 +35,8 @@ def log_prior_mu(mu, mu0, sigma0):
 log_prior_mu_batch = jax.vmap(log_prior_mu, in_axes=(0, 0, 0), out_axes=0)
 
 
-def loss_MAP(mu, D, i0, i1, mu0, sigma0, sigma_local, alpha):
+def loss_MAP(params, D, i0, i1, mu0, sigma0, sigma_local, alpha):
+    mu = params[0]
     mu_i, mu_j = mu[i0], mu[i1]
     sigma_ij = sigma_local[i0] + sigma_local[i1]
     d = jnp.linalg.norm(mu_i - mu_j, ord=2, axis=1, keepdims=1)
@@ -47,10 +48,48 @@ def loss_MAP(mu, D, i0, i1, mu0, sigma0, sigma_local, alpha):
         + jnp.log(i0e(D * d + EPSILON / sigma_ij))
     )
     log_mu_all = log_prior_mu_batch(mu, mu0, sigma0)
-    return jnp.sum(log_llh) + alpha * jnp.sum(log_mu_all)
+    # using Adam to minize the loss (maximize MAP)
+    return -jnp.sum(log_llh) - alpha * jnp.sum(log_mu_all)
 
 
-loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP), argnums=[0]))
+# loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP), argnums=[0]))
+loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP)))
+
+
+# try to implement the optimization using jax
+def init_params(
+    n_samples,
+    n_components=2,
+    random_state=2021,
+    init_mu=None,
+    fixed_points=[],
+    sigma_local=1e-3,
+    sigma_fix=None,
+):
+    # global param for each mu
+    mu0 = jnp.zeros((n_samples, 2))
+    sigma0 = jnp.zeros((n_samples, 2, 2)) + jnp.eye(2)
+
+    if init_mu is not None:
+        mu = jnp.array(init_mu)
+        assert mu.shape == (n_samples, n_components)
+    else:
+        key_mu, _ = jax.random.split(jax.random.PRNGKey(random_state))
+        mu = jax.random.normal(key_mu, (n_samples, n_components))
+
+    # set prior for fixed points
+    if fixed_points:
+        sigma_fix = sigma_fix or FIXED_SCALE
+        print(f"[PMDS MAP2] using figma_fix={sigma_fix} with fixed points: ")
+        pprint(fixed_points)
+
+        fixed_indices, fixed_pos = map(jnp.array, zip(*fixed_points))
+        mu0 = jax.ops.index_update(mu0, fixed_indices, fixed_pos)
+        sigma0 = jax.ops.index_update(
+            sigma0, fixed_indices, sigma_fix * sigma0[fixed_indices]
+        )
+
+    return mu, mu0, sigma0
 
 
 def pmds_MAP2(
@@ -71,44 +110,40 @@ def pmds_MAP2(
     sigma_fix=None,  # sigma^2_{fix}
 ):
     # can multiply the log prior with factor N
-    if alpha is None:
-        alpha = n_samples - 1
+    alpha = alpha or n_samples
 
-    # global param for each mu
-    mu0 = jnp.zeros((n_samples, 2))
-    sigma0 = jnp.zeros((n_samples, 2, 2)) + jnp.eye(2)
-
+    # init latent vars and params
+    mu, mu0, sigma0 = init_params(
+        n_samples,
+        n_components,
+        random_state=random_state,
+        init_mu=init_mu,
+        fixed_points=fixed_points,
+        sigma_local=sigma_local,
+        sigma_fix=sigma_fix,
+    )
     # local variance for each point
     sigma_local = jnp.ones((2, 1)) * sigma_local
-
-    if init_mu is not None:
-        mu = jnp.array(init_mu)
-        assert mu.shape == (n_samples, n_components)
-    else:
-        key_mu, _ = jax.random.split(jax.random.PRNGKey(random_state))
-        mu = jax.random.normal(key_mu, (n_samples, n_components))
-        # mu = jnp.zeros((n_samples, 2))
-
-    # set prior for fixed points
-    if fixed_points:
-        sigma_fix = sigma_fix or FIXED_SCALE
-        print(f"[PMDS MAP2] using figma_fix={sigma_fix} with fixed points: ")
-        pprint(fixed_points)
-
-        fixed_indices, fixed_pos = map(jnp.array, zip(*fixed_points))
-        mu0 = jax.ops.index_update(mu0, fixed_indices, fixed_pos)
-        sigma0 = jax.ops.index_update(
-            sigma0, fixed_indices, sigma_fix * sigma0[fixed_indices]
-        )
 
     loss = 0.0
     total_time = 0
     all_loss = []
     mds_stress = sammon_err = -1.0
 
-    for epoch in range(epochs):
-        tic = time()
+    # optimizer
+    opt_init, opt_update, get_params = adam(step_size=lr)
+    opt_state = opt_init([mu])
 
+    @jax.jit
+    def update(epoch, opt_state, dists, i0, i1, mu0, sigma0, sigma_local, alpha):
+        params = get_params(opt_state)
+        loss, grads = loss_and_grads_MAP(
+            params, dists, i0, i1, mu0, sigma0, sigma_local, alpha
+        )
+        opt_state = opt_update(epoch, grads, opt_state)
+        return loss, opt_state
+
+    for epoch in range(epochs):
         # shuffle the observed pairs in each epoch
         batch = random.sample(p_dists, k=len(p_dists))
         # unpatch pairwise distances and indices of points in each pair
@@ -116,35 +151,11 @@ def pmds_MAP2(
         dists = jnp.array(dists).reshape(-1, 1)
         i0, i1 = map(jnp.array, zip(*pair_indices))
 
-        loss, [grads_mu] = loss_and_grads_MAP(
-            mu, dists, i0, i1, mu0, sigma0, sigma_local, alpha
+        loss, opt_state = update(
+            epoch, opt_state, dists, i0, i1, mu0, sigma0, sigma_local, alpha
         )
-        mu = mu + alpha * lr * grads_mu
-
-        if debug_D_squareform is not None:
-            mds_stress = stress(debug_D_squareform, mu)
-            # sammon_err = sammonZ(debug_D_squareform, mu)
-        print(
-            f"[DEBUG] epoch {epoch}, loss: {-loss:,.2f},"
-            f" stress: {mds_stress:,.2f}, "
-            # f" sammon: {sammon_err:,.2f}, "
-            f" in {(time() - tic):.2f}s"
-        )
-        total_time += time() - tic
-
         all_loss.append(loss)
-        lazylog(
-            epoch,
-            {
-                "loss": float(loss),
-                "stress": mds_stress,
-                "sammon": sammon_err,
-                "grad_mu1": hist(grads_mu[:, 0]),
-                "grad_mu2": hist(grads_mu[:, 1]),
-            },
-        )
+        print(f"{epoch}, {loss:,.2f}")
 
-    print(f"DONE: final loss: {loss:,.0f}; {epochs} epochs in {total_time:.2f}s")
-    metric_log({"total_loss": float(loss)})
-
+    mu = get_params(opt_state)[0]
     return mu, None, [all_loss, [], []], None
