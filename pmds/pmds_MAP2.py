@@ -1,7 +1,5 @@
 # Latent variable Probabilistic MDS
 import random
-from time import time
-from functools import partial
 from pprint import pprint
 
 import wandb
@@ -12,20 +10,20 @@ from jax.scipy.special import i0e
 from jax.scipy.stats import multivariate_normal
 from jax.experimental.optimizers import adam
 
-from .score import stress, sammonZ
+# from .score import stress, sammonZ
 
 
 EPSILON = 1e-5
-FIXED_SCALE = 1e-3
-DISABLE_LOGGING = True
-
-hist = wandb.Histogram
-if DISABLE_LOGGING:
-    metric_log = lambda _: None
-    lazylog = lambda _, __: None
-else:
-    metric_log = wandb.log
-    lazylog = lambda i, d: wandb.log(d, commit=False, step=i)
+FIXED_SCALE = 0.1
+# DISABLE_LOGGING = True
+#
+# hist = wandb.Histogram
+# if DISABLE_LOGGING:
+#     metric_log = lambda _: None
+#     lazylog = lambda _, __: None
+# else:
+#     metric_log = wandb.log
+#     lazylog = lambda i, d: wandb.log(d, commit=False, step=i)
 
 
 def log_prior_mu(mu, mu0, sigma0):
@@ -126,9 +124,7 @@ def pmds_MAP2(
     sigma_local = jnp.ones((2, 1)) * sigma_local
 
     loss = 0.0
-    total_time = 0
     all_loss = []
-    mds_stress = sammon_err = -1.0
 
     # optimizer
     opt_init, opt_update, get_params = adam(step_size=lr)
