@@ -36,13 +36,28 @@ default_cyto_image_node_style = dict(
 )
 
 default_cyto_normal_node_style = dict(
-    selector="normal-node",
+    selector=".normal-node",
     style={
         "width": 0.03,
         "height": 0.03,
         "shape": "ellipse",
         "overlay-opacity": 0.0,
         "background-color": "data(color)",
+    },
+)
+
+default_cyto_label_node_style = dict(
+    selector=".label-node",
+    style={
+        "label": "data(label)",
+        "width": 0.03,
+        "height": 0.03,
+        "font-size": 0.025,
+        "shape": "ellipse",
+        "overlay-opacity": 0.0,
+        "background-color": "data(color)",
+        "text-halign": "center",
+        "text-valign": "top",
     },
 )
 
@@ -84,6 +99,7 @@ cytoplot_layout = cyto.Cytoscape(
         [
             default_cyto_image_node_style,
             default_cyto_normal_node_style,
+            default_cyto_label_node_style,
             default_cyto_selected_node_style,
         ]
         + additional_cyto_css

@@ -8,25 +8,35 @@ from pmds.pmds_MAP2 import pmds_MAP2
 STATIC_DIR = "./static"
 
 DEFAULT_CONFIG = dict(
-    n_samples=50,
+    n_samples=500,  # 50,
     n_components=2,
     batch_size=0,
-    epochs=200,
-    learning_rate=1.3e-7,
+    epochs=100,
+    learning_rate=8e-1,  # 1.3e-7,
     sigma_local=1e-3,
     # missing_pairs=0.0,
     sigma_fix=1e-3,
 )
 
 CONFIG = {
+    "swiss_roll_noise": dict(
+        n_samples=350,  # 50,
+        n_components=2,
+        batch_size=0,
+        epochs=100,
+        learning_rate=1.0,
+        sigma_local=1e-3,
+        # missing_pairs=0.0,
+        sigma_fix=1e-3,
+    ),
     "digits012": dict(
         dataset_name="digits012",
         n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
         n_components=2,
         batch_size=0,
         epochs=100,
-        learning_rate=2e-10,  # (no missing: 5e-6, missing 50%: 3e-5) ,
-        sigma_local=1e-4,
+        learning_rate=0.5,  # (no missing: 5e-6, missing 50%: 3e-5) ,
+        sigma_local=1e-3,
         # missing_pairs=0.0,
     ),
     "digits5": dict(
@@ -78,11 +88,11 @@ CONFIG = {
     ),
     "qpcr": dict(
         dataset_name="qpcr",
-        n_samples=200,  # 437,
+        n_samples=437,  # 200
         n_components=2,
         batch_size=0,
         epochs=100,
-        learning_rate=1e-8,
+        learning_rate=1,
         sigma_local=1e-3,
     ),
     "iris": dict(
@@ -135,7 +145,7 @@ def run_pmds(dataset_name, current_Z=None, fixed_points=[]):
         n_components=2,
         epochs=args.epochs,
         lr=args.learning_rate,
-        random_state=20201,
+        random_state=2021,
         # debug_D_squareform=D_squareform,
         fixed_points=fixed_points,
         sigma_local=vars(args).get("sigma_local", 1e-3),

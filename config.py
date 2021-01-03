@@ -584,24 +584,24 @@ pre_config = {
             n_samples=None,  # 437, -- always load all data points
             n_components=2,
             batch_size=0,
-            epochs=100,
-            learning_rate=2.5e-9,  # 2e-8,
+            epochs=200,
+            learning_rate=5e-1,  # 2.5e-9,  # 2e-8,
             sigma_local=1e-3,
             sigma_fix=1e-3,
-            random_state=42,
+            random_state=2021,
             std=False,
             pca=None,
             fixed_points=[
-                (1, [-0.75, 1.5]),  # '1' (0)
-                (19, [-0.4, 1.25]),  # '2' (1)
-                (24, [-0.2, 0.75]),  # '4' (2)
-                (86, [0.0, 0.0]),  # '8' (3)
-                (114, [0.2, 0.0]),  # '16' (4)
-                (222, [0.75, -1.0]),  # '32TE' (5)
-                (204, [0.5, 1.2]),  # '32ICM' (6)
-                (286, [1.2, 0.5]),  # '64PE' (7)
-                (344, [1.0, -1.0]),  # '64TE' (8)
-                (417, [1.2, 2.0]),  # '64EPI' (9)
+                # (1, [-0.75, 1.5]),  # '1' (0)
+                # (19, [-0.4, 1.25]),  # '2' (1)
+                # (24, [-0.2, 0.75]),  # '4' (2)
+                # (86, [0.0, 0.0]),  # '8' (3)
+                # (114, [0.2, 0.0]),  # '16' (4)
+                # (222, [0.75, -1.0]),  # '32TE' (5)
+                # (204, [0.5, 1.2]),  # '32ICM' (6)
+                # (286, [1.2, 0.5]),  # '64PE' (7)
+                # (344, [1.0, -1.0]),  # '64TE' (8)
+                # (417, [1.2, 2.0]),  # '64EPI' (9)
             ],
         ),
         "iris": dict(
@@ -646,17 +646,17 @@ pre_config = {
         ),
         "swiss_roll_noise": dict(
             dataset_name="swiss_roll_noise",
-            n_samples=300,
+            n_samples=350,
             n_components=2,
             batch_size=0,
-            epochs=100,
+            epochs=150,
             ### for 300 points
             # learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
             # sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
             # missing_pairs=0.0,
-            learning_rate=4e-8,
+            learning_rate=1.0,
             sigma_local=1e-3,
-            random_state=42,
+            random_state=2021,
             fixed_points=[
                 # (21, [-0.3, 0]),
                 # (71, [-0.2, 0]),

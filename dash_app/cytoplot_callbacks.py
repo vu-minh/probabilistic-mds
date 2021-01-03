@@ -5,6 +5,8 @@ from collections import defaultdict
 
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib.colors import to_hex
+from matplotlib.cm import get_cmap
 
 import dash
 from dash.exceptions import PreventUpdate
@@ -17,7 +19,7 @@ from app_logic import run_pmds
 
 STATIC_DIR = "./static"
 IMAGE_DATASETS = ("digits", "fmnist")
-TABULAR_DATASETS = ()
+TABULAR_DATASETS = "qpcr"
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]
@@ -43,32 +45,27 @@ def get_init_embedding(dataset_name, method_name="MAP2"):
 
 
 @lru_cache(maxsize=None)
-def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type, color):
+def _build_cyto_node_image(idx, x, y, dataset_name, cmap_type):
     return dict(
         group="nodes",
         classes="img-node",
-        data=dict(
-            id=str(idx),
-            label=f"node_{idx}",
-            color=color,
-            url=get_image_url(dataset_name, idx, cmap_type),
-        ),
+        data=dict(id=str(idx), url=get_image_url(dataset_name, idx, cmap_type)),
         position=dict(x=x, y=y),
     )
 
 
 @lru_cache(maxsize=None)
-def _build_cyto_node_with_label(idx, x, y, dataset_name, cmap_type, color):
+def _build_cyto_node_with_label(idx, x, y, color, text_label):
     return dict(
         group="nodes",
         classes="label-node",
-        data=dict(id=str(idx), label=f"node_{idx}", color=color),
+        data=dict(id=str(idx), label=f"{idx}-{text_label}", color=color),
         position=dict(x=x, y=y),
     )
 
 
 @lru_cache(maxsize=None)
-def _build_cyto_node_normal(idx, x, y, dataset_name, cmap_type, color):
+def _build_cyto_node_normal(idx, x, y, color):
     return dict(
         group="nodes",
         classes="normal-node",
@@ -77,59 +74,39 @@ def _build_cyto_node_normal(idx, x, y, dataset_name, cmap_type, color):
     )
 
 
-def _gen_color_from_label(labels, dataset_name, cmap_type="jet"):
-    import matplotlib as mpl
-    import matplotlib.cm as cm
-    from matplotlib.colors import rgb2hex, to_hex
-    from matplotlib.cm import get_cmap
-
+def _gen_color_from_label(labels, dataset_name, cmap_type="tab10"):
     if dataset_name in ARTIFICIAL_DATASET or len(np.unique(labels)) > 10:
         cmap_type = "Spectral"
-    else:
-        cmap_type = "tab10"
-
-    # my_cmap = cm.ScalarMappable(
-    #     norm=mpl.colors.Normalize(vmin=0.0, vmax=1.0), cmap=cmap_type
-    # )
-    # return list(map(my_cmap.to_rgba, labels))
+    print(f"[DEBUG] using {cmap_type} for {dataset_name}")
 
     cmap = get_cmap(cmap_type)
     labels = np.array(labels) / np.max(labels)
-    return list(map(lambda lbl: to_hex(cm.Spectral(lbl)), labels))
+    return list(map(lambda lbl: to_hex(cmap(lbl)), labels))
 
 
 def _build_cyto_nodes(dataset_name, Z, labels=None, cmap_type="gray"):
-    # build different node types according to `dataset_name`
-    if dataset_name.startswith(IMAGE_DATASETS):
-        build_node_func = _build_cyto_node_image
-    elif dataset_name.startswith(TABULAR_DATASETS):
-        build_node_func = _build_cyto_node_with_label
-    else:
-        build_node_func = _build_cyto_node_normal
+    if labels is None:
+        labels = np.zeros(len(Z))
+    colors = _gen_color_from_label(labels, dataset_name)
 
-    # gen color for each node from labels
-    labels = range(len(Z)) if labels is None else labels
-    colors = _gen_color_from_label(labels, dataset_name, cmap_type)
+    nodes = []
+    for idx, [x, y] in enumerate(Z):
+        y = -y  # cytoscape use (0, 0) at the top-left
 
-    # # test color map
-    # import matplotlib as mpl
-    # import matplotlib.cm as cm
+        if dataset_name.startswith(TABULAR_DATASETS):
+            node = _build_cyto_node_with_label(idx, x, y, colors[idx], labels[idx])
+        elif dataset_name.startswith(IMAGE_DATASETS):
+            node = _build_cyto_node_image(idx, x, y, dataset_name, cmap_type)
+        else:  # ARTIFICIAL_DATASET
+            node = _build_cyto_node_normal(idx, x, y, colors[idx])
 
-    # fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 5))
-    # norm = mpl.colors.Normalize(vmin=-1, vmax=1)
-    # ax0.scatter(*Z.T, c=labels, cmap=cm.Spectral, norm=norm)
-    # ax1.scatter(*Z.T, c=cm.Spectral(np.array(labels) / np.max(labels)))
-    # fig.savefig("test-cmap.png")
+        nodes.append(node)
 
-    # NOTE cytospace coordinate (0, 0) is top-left
-    return [
-        build_node_func(idx, x, -y, dataset_name, cmap_type, color)
-        for idx, ([x, y], color) in enumerate(zip(Z, colors))
-    ]
+    return nodes
 
 
 def debug_embedding(old_Z, new_Z, selected_points=[], colors=None):
-    print("Plot debug selected points: ", selected_points)
+    print("[DEBUG]Plot debug selected points: ", selected_points)
     fig, [ax0, ax1] = plt.subplots(1, 2, figsize=(10, 5))
 
     Z0 = old_Z[selected_points, :]
