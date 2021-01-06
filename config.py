@@ -730,6 +730,19 @@ pre_config = {
             std=False,
             pca=None,
         ),
+        "automobile": dict(
+            dataset_name="automobile",
+            n_samples=None,  # 203
+            n_components=2,
+            batch_size=0,
+            epochs=150,
+            learning_rate=1.0,
+            sigma_local=1e-3,
+            # missing_pairs=0.5,
+            random_state=2021,
+            std=True,
+            pca=None,
+        ),
     },
     "MAP3": {
         "digits012": dict(

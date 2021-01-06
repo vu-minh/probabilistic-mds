@@ -48,24 +48,24 @@ CONFIG = {
         sigma_local=1e-3,
     ),
     "qpcr": dict(
-        epochs=100,
-        learning_rate=1.25,
+        epochs=150,
+        learning_rate=2.25,
         sigma_local=1e-3,
-        sigma_fix=1e-3,
+        sigma_fix=1e-4,
     ),
     "swiss_roll_noise": dict(
         epochs=150,
         learning_rate=2.0,
-        sigma_local=1e-2,
+        sigma_local=1e-3,
         # missing_pairs=0.0,
         sigma_fix=1e-6,
     ),
-    "s_curve": dict(
-        epochs=200,
-        learning_rate=1.5,
-        sigma_local=5e-2,
+    "automobile": dict(
+        epochs=150,
+        learning_rate=1.0,
+        sigma_local=1e-3,
         # missing_pairs=0.0,
-        sigma_fix=1e-6,
+        sigma_fix=1e-3,
     ),
 }
 

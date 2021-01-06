@@ -14,7 +14,11 @@ from scipy.spatial.distance import pdist, squareform
 from plot import generate_stacked_svg
 
 
-DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr", "20news5", "20news5_cosine"]
+DISTANCE_DATASET = (
+    ["cities_us_toy", "cities_us", "qpcr"]
+    + ["20news5", "20news5_cosine"]
+    + ["automobile"]
+)
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]
@@ -135,6 +139,7 @@ def load_distance_dataset(dataset_name, data_dir):
         "qpcr": load_qpcr,
         "20news5": load_20news5,
         "20news5_cosine": partial(load_20news5, metric="cosine"),
+        "automobile": load_automobile,
     }[dataset_name](data_dir)
 
 
@@ -159,8 +164,26 @@ def load_20news5(data_dir="./data", metric="euclidean", n_samples=250, random_st
     X, labels = shuffle(
         data["data"], data["target"], n_samples=n_samples, random_state=random_state
     )
+    X = StandardScaler().fit_transform(X)
     dists = pdist(X, metric)
     return dists, labels, len(X)
+
+
+def load_automobile(data_dir="./data"):
+    import pickle
+
+    with open(f"{data_dir}/automobile.pkl", "rb") as in_file:
+        data = pickle.load(in_file)
+    X, aspects = data["data"], data["multi_aspects"]
+    X = StandardScaler().fit_transform(X)
+
+    num_doors = aspects["num_of_doors"]["target"]  # 0: four, 1: two
+    num_cylinders = np.array(
+        [int(cylinder in [2, 4]) for cylinder in aspects["num_of_cylinders"]["target"]]
+    )  # 2: four, 3: six, 1: five, 4: three, 0: eight
+    labels = num_doors + num_cylinders * 2
+
+    return pdist(X, "euclidean"), labels, len(X)
 
 
 def load_qpcr(data_dir="./data"):
@@ -229,10 +252,10 @@ def load_fashion_mnist(
 
 
 if __name__ == "__main__":
-    D, labels, N = load_dataset("20news5", data_dir="./data")
+    D, labels, N = load_dataset("automobile", data_dir="./data")
     # D, labels, N = load_qpcr(data_dir="./data")
     # D, labels, N = load_dataset("20news5_cosine", data_dir="./data", n_samples=1000)
-    print(labels.shape, D.shape, np.unique(labels)[:20])
+    print(labels.shape, D.shape, np.unique(labels)[:20], labels[:20])
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)
     # print(X_train.shape, X_train.min(), X_train.max())

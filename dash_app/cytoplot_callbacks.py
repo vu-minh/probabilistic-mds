@@ -19,7 +19,7 @@ from app_logic import run_pmds
 
 STATIC_DIR = "./static"
 IMAGE_DATASETS = ("digits", "fmnist")
-TABULAR_DATASETS = "qpcr"
+TABULAR_DATASETS = ("qpcr", "automobile")
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]

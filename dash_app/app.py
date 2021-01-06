@@ -9,7 +9,7 @@ import cytoplot_callbacks
 
 
 TRADITIONAL_DATASET = ["digits012", "digits5", "fmnist", "fmnist_subset"]
-DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
+DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr", "automobile"]
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]
