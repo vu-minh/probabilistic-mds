@@ -48,7 +48,7 @@ def loss_MAP(params, D, i0, i1, mu0, sigma0, sigma_local, alpha):
     log_mu_all = log_prior_mu_batch(mu, mu0, sigma0)
     # using Adam to minize the loss (maximize MAP)
     # return -jnp.sum(log_llh) - alpha * jnp.sum(log_mu_all)
-    return -jnp.mean(log_llh) - jnp.mean(2 * log_mu_all)
+    return -0.5 * jnp.mean(log_llh) - jnp.mean(log_mu_all)
 
 
 # loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP), argnums=[0]))

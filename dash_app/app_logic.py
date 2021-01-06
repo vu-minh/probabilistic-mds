@@ -20,13 +20,13 @@ DEFAULT_CONFIG = dict(
 
 CONFIG = {
     "digits012": dict(
-        epochs=100,
+        epochs=150,
         learning_rate=2.0,
         sigma_local=1e-3,
     ),
     "digits5": dict(
-        epochs=100,
-        learning_rate=2.0,
+        epochs=150,
+        learning_rate=2.25,
         sigma_local=1e-3,
     ),
     "fmnist": dict(
