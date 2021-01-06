@@ -18,6 +18,9 @@ import plot, dataset, config
 
 
 def run_pdms(D, N, args, labels=None):
+    # debug show histogram of input distances
+    plot.plot_hist(D, out_name=f"{plot_dir}/hist.png")
+
     # pack pair indices with distances
     all_pairs = list(combinations(range(N), 2))
     assert len(D) == len(all_pairs)

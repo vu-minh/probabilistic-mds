@@ -17,6 +17,12 @@ def line(points, out_name="line.png"):
     fig.savefig(out_name, bbox_inches="tight")
 
 
+def plot_hist(D, out_name="hist.png"):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.hist(D, bins=100)
+    fig.savefig(out_name)
+
+
 def plot_losses(all_losses, titles=[], out_name="loss.png"):
     """
     Plot losses: total loss, log likelihood and log prior

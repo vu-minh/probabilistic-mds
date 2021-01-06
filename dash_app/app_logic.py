@@ -54,9 +54,9 @@ CONFIG = {
         sigma_fix=1e-3,
     ),
     "swiss_roll_noise": dict(
-        epochs=200,
-        learning_rate=1.5,
-        sigma_local=5e-2,
+        epochs=150,
+        learning_rate=2.0,
+        sigma_local=1e-2,
         # missing_pairs=0.0,
         sigma_fix=1e-6,
     ),

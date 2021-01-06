@@ -160,7 +160,7 @@ def load_20news5(data_dir="./data", metric="euclidean", n_samples=250, random_st
         data["data"], data["target"], n_samples=n_samples, random_state=random_state
     )
     dists = pdist(X, metric)
-    return dists, labels, len(data["target"])
+    return dists, labels, len(X)
 
 
 def load_qpcr(data_dir="./data"):
@@ -229,9 +229,9 @@ def load_fashion_mnist(
 
 
 if __name__ == "__main__":
-    # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
+    D, labels, N = load_dataset("20news5", data_dir="./data")
     # D, labels, N = load_qpcr(data_dir="./data")
-    D, labels, N = load_dataset("20news5_cosine", data_dir="./data", n_samples=1000)
+    # D, labels, N = load_dataset("20news5_cosine", data_dir="./data", n_samples=1000)
     print(labels.shape, D.shape, np.unique(labels)[:20])
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)
