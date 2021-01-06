@@ -47,7 +47,8 @@ def loss_MAP(params, D, i0, i1, mu0, sigma0, sigma_local, alpha):
     )
     log_mu_all = log_prior_mu_batch(mu, mu0, sigma0)
     # using Adam to minize the loss (maximize MAP)
-    return -jnp.sum(log_llh) - alpha * jnp.sum(log_mu_all)
+    # return -jnp.sum(log_llh) - alpha * jnp.sum(log_mu_all)
+    return -jnp.mean(log_llh) - jnp.mean(2 * log_mu_all)
 
 
 # loss_and_grads_MAP = jax.jit(jax.value_and_grad(jax.jit(loss_MAP), argnums=[0]))
@@ -61,7 +62,6 @@ def init_params(
     random_state=2021,
     init_mu=None,
     fixed_points=[],
-    sigma_local=1e-3,
     sigma_fix=None,
 ):
     # global param for each mu
@@ -108,7 +108,10 @@ def pmds_MAP2(
     sigma_fix=None,  # sigma^2_{fix}
 ):
     # can multiply the log prior with factor N
-    alpha = alpha or n_samples
+    alpha = alpha or n_samples - 1
+
+    # local variance for each point
+    sigma_local = jnp.ones((2, 1)) * sigma_local
 
     # init latent vars and params
     mu, mu0, sigma0 = init_params(
@@ -117,14 +120,8 @@ def pmds_MAP2(
         random_state=random_state,
         init_mu=init_mu,
         fixed_points=fixed_points,
-        sigma_local=sigma_local,
         sigma_fix=sigma_fix,
     )
-    # local variance for each point
-    sigma_local = jnp.ones((2, 1)) * sigma_local
-
-    loss = 0.0
-    all_loss = []
 
     # optimizer
     opt_init, opt_update, get_params = adam(step_size=lr)
@@ -139,6 +136,8 @@ def pmds_MAP2(
         opt_state = opt_update(epoch, grads, opt_state)
         return loss, opt_state
 
+    loss = 0.0
+    all_loss = []
     for epoch in range(epochs):
         # shuffle the observed pairs in each epoch
         batch = random.sample(p_dists, k=len(p_dists))
@@ -151,7 +150,7 @@ def pmds_MAP2(
             epoch, opt_state, dists, i0, i1, mu0, sigma0, sigma_local, alpha
         )
         all_loss.append(loss)
-        print(f"{epoch}, {loss:,.2f}")
+        print(f"{epoch}, {loss:,.4f}")
 
     mu = get_params(opt_state)[0]
     return mu, None, [all_loss, [], []], None

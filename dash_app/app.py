@@ -8,7 +8,7 @@ from server import app
 import cytoplot_callbacks
 
 
-TRADITIONAL_DATASET = ["digits012", "fmnist", "fmnist_subset"]
+TRADITIONAL_DATASET = ["digits012", "digits5", "fmnist", "fmnist_subset"]
 DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]

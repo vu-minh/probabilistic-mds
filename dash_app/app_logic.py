@@ -19,106 +19,53 @@ DEFAULT_CONFIG = dict(
 )
 
 CONFIG = {
-    "swiss_roll_noise": dict(
-        n_samples=350,  # 50,
-        n_components=2,
-        batch_size=0,
-        epochs=100,
-        learning_rate=1.0,
-        sigma_local=1e-3,
-        # missing_pairs=0.0,
-        sigma_fix=1e-3,
-    ),
     "digits012": dict(
-        dataset_name="digits012",
-        n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
-        n_components=2,
-        batch_size=0,
         epochs=100,
-        learning_rate=0.5,  # (no missing: 5e-6, missing 50%: 3e-5) ,
+        learning_rate=2.0,
         sigma_local=1e-3,
-        # missing_pairs=0.0,
     ),
     "digits5": dict(
-        dataset_name="digits",
-        n_samples=250,  # 1797
-        n_components=2,
-        batch_size=0,
-        epochs=200,
-        learning_rate=1e-5,
+        epochs=100,
+        learning_rate=2.0,
+        sigma_local=1e-3,
     ),
     "fmnist": dict(
-        dataset_name="fmnist",
-        n_samples=200,  # None 1000 samples
-        n_components=2,
-        batch_size=0,
-        epochs=20,
-        learning_rate=1e-9,
-        sigma_local=1e-5,
-        # missing_pairs=0.0,
+        epochs=100,
+        learning_rate=1.5,
+        sigma_local=1e-3,
+        sigma_fix=1e-4,
     ),
     "fmnist_subset": dict(
-        dataset_name="fmnist_subset",
-        n_samples=100,  # None 1000 samples
-        n_components=2,
-        batch_size=0,
-        epochs=50,
-        learning_rate=1e-9,
-        sigma_local=1e-5,
-        # missing_pairs=0.0,
+        epochs=100,
+        learning_rate=1.25,
+        sigma_local=1e-2,
+        sigma_fix=1e-4,
     ),
     "cities_us_toy": dict(
-        dataset_name="cities_us_toy",
-        n_samples=None,  # 10
-        n_components=2,
         batch_size=0,
         epochs=100,
         learning_rate=1e-5,
-        sigma_local=1e-3,
-        # missing_pairs=0.0,
-    ),
-    "cities_us": dict(
-        dataset_name="cities_us",
-        n_samples=128,
-        n_components=2,
-        batch_size=0,
-        epochs=100,
-        learning_rate=2e-6,
         sigma_local=1e-3,
     ),
     "qpcr": dict(
-        dataset_name="qpcr",
-        n_samples=437,  # 200
-        n_components=2,
-        batch_size=0,
         epochs=100,
-        learning_rate=1,
+        learning_rate=1.25,
         sigma_local=1e-3,
-    ),
-    "iris": dict(
-        dataset_name="iris",
-        n_samples=None,  # 150
-        n_components=2,
-        batch_size=0,
-        epochs=100,
-        learning_rate=1.2e-9,
-        sigma_local=1e-3,
-    ),
-    "wine": dict(
-        dataset_name="wine",
-        n_samples=100,
-        n_components=2,
-        batch_size=0,
-        epochs=100,
-        learning_rate=1.5e-9,
-        sigma_local=1e-3,
-    ),
-    "swiss_roll": dict(
-        epochs=200,
-        learning_rate=3e-8,
-        sigma_local=1e-3,
-        # missing_pairs=0.0,
         sigma_fix=1e-3,
+    ),
+    "swiss_roll_noise": dict(
+        epochs=200,
+        learning_rate=1.5,
+        sigma_local=5e-2,
+        # missing_pairs=0.0,
+        sigma_fix=1e-6,
+    ),
+    "s_curve": dict(
+        epochs=200,
+        learning_rate=1.5,
+        sigma_local=5e-2,
+        # missing_pairs=0.0,
+        sigma_fix=1e-6,
     ),
 }
 

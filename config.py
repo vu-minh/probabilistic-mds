@@ -467,11 +467,11 @@ pre_config = {
             n_samples=200,  # None for all 537 data points of classes [0 ,1, 2]
             n_components=2,
             batch_size=0,
-            epochs=200,
-            learning_rate=5e-1,  # 1e-9,  # (no missing: 5e-6, missing 50%: 3e-5) ,
+            epochs=100,
+            learning_rate=2.0,
             sigma_local=1e-3,
-            missing_pairs=0.6,
-            random_state=42,
+            missing_pairs=0.5,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
             fixed_points=[
@@ -482,13 +482,13 @@ pre_config = {
             batch_size_mds=500,
         ),
         "digits5": dict(
-            dataset_name="digits",
+            dataset_name="digits5",
             n_samples=250,  # 1797
             n_components=2,
             batch_size=0,
-            epochs=200,
-            learning_rate=1e-5,
-            random_state=2020,
+            epochs=100,
+            learning_rate=2.0,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
         ),
@@ -497,30 +497,28 @@ pre_config = {
             n_samples=200,  # None 1000 samples
             n_components=2,
             batch_size=0,
-            epochs=150,
-            learning_rate=1e-9,
-            sigma_local=1e-5,
+            epochs=100,
+            learning_rate=2.0,
+            sigma_local=1e-3,
             # missing_pairs=0.0,
-            random_state=42,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
-            pca=0.9,
-            fixed_points=[
-                # (0, -1.0, -1.0),
-            ],
+            pca=None,
+            fixed_points=[],
             # epochs_mds=20,
             # learning_rate_mds=20,
             # batch_size_mds=500,
         ),
         "fmnist_subset1": dict(
             dataset_name="fmnist_subset",
-            n_samples=200,  # None 1000 samples
+            n_samples=300,  # None 1000 samples
             n_components=2,
             batch_size=0,
             epochs=150,
-            learning_rate=1e-9,
-            sigma_local=1e-5,
+            learning_rate=1.0,
+            sigma_local=1e-3,
             # missing_pairs=0.0,
-            random_state=42,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=0.9,
             fixed_points=[
@@ -529,14 +527,14 @@ pre_config = {
         ),
         "fmnist_subset": dict(
             dataset_name="fmnist_subset",
-            n_samples=100,  # None 1000 samples
+            n_samples=300,  # None 1000 samples
             n_components=2,
             batch_size=0,
-            epochs=100,
-            learning_rate=3e-9,
-            sigma_local=1e-5,
+            epochs=150,
+            learning_rate=1.0,
+            sigma_local=1e-3,
             # missing_pairs=0.0,
-            random_state=42,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=0.9,
             fixed_points=[
@@ -549,15 +547,16 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=0.5,  # Testing with Adam; old lr for GD: 1e-5,
+            learning_rate=1.0,  # Testing with Adam; old lr for GD: 1e-5,
             sigma_local=1e-3,
             # missing_pairs=0.0,
             random_state=42,
             std=False,
             pca=None,
             fixed_points=[
-                (0, [0.5, 2.0]),  # New York
-                (6, [-0.5, 2.0]),  # Olympia
+                (0, [0.5, 1.0]),  # New York
+                # (6, [-0.5, 1.0]),  # Olympia
+                (2, [-0.5, 0.6]),  # Los Angeles
             ],
             ### params for MDS-jax
             # epochs_mds=10,
@@ -570,8 +569,8 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=2e-6,
-            random_state=42,
+            learning_rate=1.5,
+            random_state=2021,
             std=False,
             pca=None,
             ### params for MDS-jax
@@ -584,14 +583,15 @@ pre_config = {
             n_samples=None,  # 437, -- always load all data points
             n_components=2,
             batch_size=0,
-            epochs=200,
-            learning_rate=5e-1,  # 2.5e-9,  # 2e-8,
-            sigma_local=0.1,
-            sigma_fix=1e-3,
+            epochs=150,
+            learning_rate=1.5,
+            sigma_local=1e-3,
+            sigma_fix=1e-4,
             random_state=2021,
             std=False,
             pca=None,
-            fixed_points=[
+            fixed_points="./embeddings/qpcr.json",
+            fixed_points__=[
                 # (1, [-0.75, 1.5]),  # '1' (0)
                 # (19, [-0.4, 1.25]),  # '2' (1)
                 # (24, [-0.2, 0.75]),  # '4' (2)
@@ -646,16 +646,12 @@ pre_config = {
         ),
         "swiss_roll_noise": dict(
             dataset_name="swiss_roll_noise",
-            n_samples=350,
+            n_samples=300,
             n_components=2,
             batch_size=0,
-            epochs=150,
-            ### for 300 points
-            # learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
-            # sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
-            # missing_pairs=0.0,
-            learning_rate=2.5,
-            sigma_local=0.1,
+            epochs=100,
+            learning_rate=1.5,
+            sigma_local=1e-2,  # 1e-2 for top-down view, 1e-3 for side view
             random_state=2021,
             fixed_points=[
                 # "./embeddings/swiss_roll_noise.json",
@@ -686,12 +682,9 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=2e-7,
+            learning_rate=1.0,
             sigma_local=1e-3,
-            # learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
-            # sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
-            # missing_pairs=0.5,
-            random_state=42,
+            random_state=2021,
             # fixed_points="./embeddings/s_curve.json",
             # fixed_points=[
             #     # (0, [1.0, 0.0]),
@@ -705,10 +698,10 @@ pre_config = {
             n_components=2,
             batch_size=0,
             epochs=100,
-            learning_rate=[2e-11, 2.5e-10, 2.5e-9, 5e-8, 2.5e-7, 2e-6, 1e-7][2],
-            sigma_local=[1e-6, 1e-5, 1e-4, 5e-3, 1e-2, 5e-2, 5e-1][2],
+            learning_rate=1.0,
+            sigma_local=1e-3,
             # missing_pairs=0.0,
-            random_state=42,
+            random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
             fixed_points=[
