@@ -14,7 +14,7 @@ from scipy.spatial.distance import pdist, squareform
 from plot import generate_stacked_svg
 
 
-DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr"]
+DISTANCE_DATASET = ["cities_us_toy", "cities_us", "qpcr", "20news5", "20news5_cosine"]
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]
@@ -133,6 +133,8 @@ def load_distance_dataset(dataset_name, data_dir):
         "cities_us_toy": load_cities_us_toy,
         "cities_us": load_cities_us,
         "qpcr": load_qpcr,
+        "20news5": load_20news5,
+        "20news5_cosine": partial(load_20news5, metric="cosine"),
     }[dataset_name](data_dir)
 
 
@@ -152,6 +154,15 @@ def load_cities_us_toy(data_dir="./data"):
     return parse_toy_data(data_dir)
 
 
+def load_20news5(data_dir="./data", metric="euclidean", n_samples=250, random_state=42):
+    data = joblib.load(f"{data_dir}/20NEWS5.z")
+    X, labels = shuffle(
+        data["data"], data["target"], n_samples=n_samples, random_state=random_state
+    )
+    dists = pdist(X, metric)
+    return dists, labels, len(data["target"])
+
+
 def load_qpcr(data_dir="./data"):
     # license: Copyright (c) 2014, the Open Data Science Initiative
     # license: https://www.elsevier.com/legal/elsevier-website-terms-and-conditions
@@ -162,6 +173,7 @@ def load_qpcr(data_dir="./data"):
     file_path = f"{data_dir}/qprc.z"
     if not os.path.exists(file_path):
         URL = "https://raw.githubusercontent.com/sods/ods/master/datasets/guo_qpcr.csv"
+        # URL = f"{data_dir}/quo_pqcr.csv"
         df = pd.read_csv(URL, index_col=0)
         dists = pdist(df.to_numpy(), "euclidean")  # note: the columns are normalized
         label_to_index = {lbl: i for i, lbl in enumerate(df.index.unique().tolist())}
@@ -219,7 +231,7 @@ def load_fashion_mnist(
 if __name__ == "__main__":
     # D, labels, N = load_dataset("cities_us", data_dir="./data", missing_pairs=0.5)
     # D, labels, N = load_qpcr(data_dir="./data")
-    D, labels, N = load_dataset("sphere_noise", data_dir="./data", n_samples=1000)
+    D, labels, N = load_dataset("20news5_cosine", data_dir="./data", n_samples=1000)
     print(labels.shape, D.shape, np.unique(labels)[:20])
 
     # X_train, y_train = load_fashion_mnist(data_dir="./data", reload=False)
