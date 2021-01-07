@@ -25,8 +25,7 @@ def run_pdms(D, N, args, labels=None):
     all_pairs = list(combinations(range(N), 2))
     assert len(D) == len(all_pairs)
 
-    # PMDS use squared Euclidean distances
-    # NOTE now PMDS use Euclidean distance (not squared)
+    # PMDS use Euclidean distance (not squared)
     dists_with_indices = list(zip(D, all_pairs))
     n_pairs = len(dists_with_indices)
 
@@ -132,6 +131,38 @@ def run_pdms(D, N, args, labels=None):
     return Z1, Z1_std, dists_with_indices
 
 
+def run_missing_pairs(D, N, args, labels):
+    n_pairs = len(D)
+    random.seed(args.random_state)
+
+    # pack pair indices with distances
+    all_pairs = list(combinations(range(N), 2))
+    dists_with_indices = list(zip(D, all_pairs))
+    D_squareform = squareform(D)
+
+    # test with different setting of missing pairs
+    missing_percent_config = list(range(0, 100, 10)) + [95]
+    for missing_percent in missing_percent_config:
+        # create non-complete data: sample from pairwise distances
+        n_used = int((1.0 - missing_percent / 100) * n_pairs)
+        dists_with_indices = random.sample(dists_with_indices, k=n_used)
+        print(f"[EXP missing pair] {len(dists_with_indices)} / {n_pairs}")
+
+        # Z, _, _, _ = pmds_MAP2(
+        #    dists_with_indices,
+        #    n_samples=N,
+        #    n_components=args.n_components,
+        #    batch_size=args.batch_size,
+        #    epochs=args.epochs,
+        #    lr=args.learning_rate,
+        #    random_state=args.random_state + 1,
+        #    debug_D_squareform=D_squareform,
+        #    fixed_points=[],
+        #    sigma_local=vars(args).get("sigma_local", 1e-3),
+        #    sigma_fix=vars(args).get("sigma_fix", 1e-3),
+        # )
+
+
 if __name__ == "__main__":
     import os
     import joblib
@@ -155,6 +186,9 @@ if __name__ == "__main__":
     argm("--epochs", "-e", default=20, type=int, help="Number of epochs")
     argm("--no_logging", action="store_true", help="Disable W&B / MLFlow logging")
     argm("--interactive", action="store_true", help="Using plotly for interactive")
+    # other arguments for running differnt (specific) experiments
+    argm("--multiple_runs_mode", action="store_true", help="Multiple runs mode for exp")
+    argm("--exp_missing_pairs", action="store_true", help="Exp with missing pairs")
 
     args = vars(parser.parse_args())
     dataset_name = args["dataset_name"]
@@ -181,15 +215,22 @@ if __name__ == "__main__":
     )
     print("[PMDS] Load dataset: ", N, D.shape)
 
-    if args.no_logging:
-        print("Using params: ", args)
-    else:
-        wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
-    Z1, Z1_std, dists_with_indices = run_pdms(D, N, args=args, labels=labels)
+    # normal mode: run once
+    if not args.multiple_runs_mode:
+        if args.no_logging:
+            print("Using params: ", args)
+        else:
+            wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
 
-    # save the embedding for dash_app (when not using fixed points)
-    if not vars(args).get("fixed_points", []):
-        joblib.dump(
-            [Z1, dists_with_indices, labels],
-            f"embeddings/{dataset_name}_{method_name}.Z",
-        )
+        Z1, Z1_std, dists_with_indices = run_pdms(D, N, args=args, labels=labels)
+
+        # save the embedding for dash_app (when not using fixed points)
+        if not vars(args).get("fixed_points", []):
+            joblib.dump(
+                [Z1, dists_with_indices, labels],
+                f"embeddings/{dataset_name}_{method_name}.Z",
+            )
+
+    # multiple-runs mode: e.g.: run exp with different values for a param
+    if args.multiple_runs_mode and args.exp_missing_pairs:
+        run_missing_pairs(D, N, args, labels)
