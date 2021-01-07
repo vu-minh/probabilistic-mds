@@ -470,7 +470,7 @@ pre_config = {
             epochs=150,
             learning_rate=2.0,
             sigma_local=1e-3,
-            # missing_pairs=0.5,
+            missing_pairs=0.0,
             random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
@@ -489,7 +489,7 @@ pre_config = {
             epochs=150,
             learning_rate=2.25,
             sigma_local=1e-3,
-            # missing_pairs=0.5,
+            missing_pairs=0.3,
             random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
@@ -556,9 +556,10 @@ pre_config = {
             std=False,
             pca=None,
             fixed_points=[
-                (0, [0.5, 1.0]),  # New York
-                # (6, [-0.5, 1.0]),  # Olympia
-                (2, [-0.5, 0.6]),  # Los Angeles
+                (0, [0.6, 0.8]),  # New York
+                # (6, [-0.45, 1.0]),  # Olympia
+                # (5, [0.05, 0.45]),  # Austin
+                (2, [-0.43, 0.62]),  # Los Angeles
             ],
             ### params for MDS-jax
             # epochs_mds=10,

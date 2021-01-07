@@ -19,7 +19,7 @@ from app_logic import run_pmds
 
 STATIC_DIR = "./static"
 IMAGE_DATASETS = ("digits", "fmnist")
-TABULAR_DATASETS = ("qpcr", "automobile")
+TABULAR_DATASETS = ("qpcr",)  # "automobile"
 ARTIFICIAL_DATASET = (
     ["swiss_roll", "swiss_roll_noise"]
     + ["s_curve", "s_curve_noise"]
@@ -119,11 +119,11 @@ def debug_embedding(old_Z, new_Z, selected_points=[], colors=None):
 
     ax1.set_aspect("equal")
     ax1.scatter(*new_Z.T, c=colors)
-    ax1.scatter(*old_Z.T, c=None, alpha=0.05)
-    ax1.scatter(x=Z0[:, 0], y=Z0[:, 1], marker="o", s=128, alpha=0.3)
+    # ax1.scatter(*old_Z.T, c=None, alpha=0.05)
+    # ax1.scatter(x=Z0[:, 0], y=Z0[:, 1], marker="o", s=128, alpha=0.05)
     ax1.scatter(x=Z1[:, 0], y=Z1[:, 1], marker="+", s=128)
 
-    fig.savefig("test_Z.png")
+    fig.savefig("test_Z.png", bbox_inches="tight")
 
 
 @app.callback(
