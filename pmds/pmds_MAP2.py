@@ -136,8 +136,7 @@ def pmds_MAP2(
         opt_state = opt_update(epoch, grads, opt_state)
         return loss, opt_state
 
-    loss = 0.0
-    all_loss = []
+    losses = []
     for epoch in range(epochs):
         # shuffle the observed pairs in each epoch
         batch = random.sample(p_dists, k=len(p_dists))
@@ -149,8 +148,8 @@ def pmds_MAP2(
         loss, opt_state = update(
             epoch, opt_state, dists, i0, i1, mu0, sigma0, sigma_local, alpha
         )
-        all_loss.append(loss)
+        losses.append(float(loss))
         print(f"{epoch}, {loss:,.4f}")
 
     mu = get_params(opt_state)[0]
-    return mu, None, [all_loss, [], []], None
+    return mu, [losses, [], []]  # old code: loss, loss_log_llh and loss_log_prior

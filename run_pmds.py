@@ -3,6 +3,7 @@ import random
 from itertools import combinations
 import wandb
 
+import numpy as np
 from sklearn.manifold import MDS
 from scipy.spatial.distance import squareform
 
@@ -79,7 +80,7 @@ def run_pdms(D, N, args, labels=None):
     if type(fixed_points) == dict:
         fixed_points = [(int(idx), [x, y]) for idx, [x, y] in fixed_points.items()]
 
-    Z1, Z1_std, all_losses, all_mu = pmds_method(
+    Z1, all_losses = pmds_method(
         dists_with_indices,
         n_samples=N,
         n_components=args.n_components,
@@ -119,7 +120,7 @@ def run_pdms(D, N, args, labels=None):
         f"MDS with jax (stress={s2:,.2f})",
     ]
     plot.compare_scatter(
-        Z0, Z1, None, Z1_std, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
+        Z0, Z1, None, None, labels, titles[:-1], out_name=f"{plot_dir}/Z.png"
     )
     plot.compare_scatter(
         Z0, Z2, None, None, labels, titles[::2], out_name=f"{plot_dir}/Zjax.png"
@@ -128,39 +129,54 @@ def run_pdms(D, N, args, labels=None):
     if args.interactive:
         plot.scatter_plotly(Z1, labels, out_name=f"{plot_dir}/Z.html")
 
-    return Z1, Z1_std, dists_with_indices
+    return Z1, dists_with_indices
 
 
-def run_missing_pairs(D, N, args, labels):
-    n_pairs = len(D)
-    random.seed(args.random_state)
-
+def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=10):
+    """Multiple runs for experiment with missing pairs.
+    In one run, call pmds_MAP2 with different input of missing pairs
+        WITH THE SAME random seed (to obtain the same random initialization).
+    Repeat `n_runs` times, store the stress and loss in emebedding dir of each dataset.
+    """
     # pack pair indices with distances
     all_pairs = list(combinations(range(N), 2))
     dists_with_indices = list(zip(D, all_pairs))
+    n_pairs = len(D)
     D_squareform = squareform(D)
 
-    # test with different setting of missing pairs
-    missing_percent_config = list(range(0, 100, 10)) + [95]
-    for missing_percent in missing_percent_config:
-        # create non-complete data: sample from pairwise distances
-        n_used = int((1.0 - missing_percent / 100) * n_pairs)
-        dists_with_indices = random.sample(dists_with_indices, k=n_used)
-        print(f"[EXP missing pair] {len(dists_with_indices)} / {n_pairs}")
+    embedding_dir = f"embeddings/{args.dataset_name}"
+    if not os.path.exists(embedding_dir):
+        os.mkdir(embedding_dir)
 
-        # Z, _, _, _ = pmds_MAP2(
-        #    dists_with_indices,
-        #    n_samples=N,
-        #    n_components=args.n_components,
-        #    batch_size=args.batch_size,
-        #    epochs=args.epochs,
-        #    lr=args.learning_rate,
-        #    random_state=args.random_state + 1,
-        #    debug_D_squareform=D_squareform,
-        #    fixed_points=[],
-        #    sigma_local=vars(args).get("sigma_local", 1e-3),
-        #    sigma_fix=vars(args).get("sigma_fix", 1e-3),
-        # )
+    # store score(s) for each run with the following header
+    score_logs = ["n_run, missing_percent, stress, loss"]
+
+    # test with different setting of missing pairs
+    missing_percents = list(range(min_percent, max_percent, 5)) + [max_percent]
+
+    for n_run in range(1, n_runs + 1):
+        for missing_percent in missing_percents:
+            # create non-complete data: sample from pairwise distances
+            n_used = int((1.0 - missing_percent / 100) * n_pairs)
+            dists_with_indices = random.sample(dists_with_indices, k=n_used)
+            print(f"[EXP missing pair] {len(dists_with_indices)} / {n_pairs}")
+
+            Z, [losses, _, _] = pmds_MAP2(
+                dists_with_indices,
+                n_samples=N,
+                epochs=args.epochs,
+                lr=args.learning_rate,
+                random_state=args.random_state + n_run,
+            )
+            if n_run == 0:
+                joblib.dump(Z, f"{embedding_dir}/{missing_percent}.z")
+            stress = score.stress(D_squareform, Z)
+            score_logs.append(f"{n_run}, {missing_percent}, {stress}, {losses[-1]}")
+
+    # write score logs to csv file for plotting/storing
+    score_file_name = f"{embedding_dir}/scores.csv"
+    with open(score_file_name, "w") as score_file:
+        score_file.write("\n".join(score_logs))
 
 
 if __name__ == "__main__":
@@ -205,6 +221,7 @@ if __name__ == "__main__":
         os.mkdir(plot_dir)
 
     # load pairwise Euclidean distances
+    dataset.ALWAYS_REGENERATE_SVG = False
     D, labels, N = dataset.load_dataset(
         args.dataset_name,
         data_dir="./data",
@@ -222,7 +239,7 @@ if __name__ == "__main__":
         else:
             wandb.init(project=f"PMDS_{method_name}_v0.4", config=args)
 
-        Z1, Z1_std, dists_with_indices = run_pdms(D, N, args=args, labels=labels)
+        Z1, dists_with_indices = run_pdms(D, N, args=args, labels=labels)
 
         # save the embedding for dash_app (when not using fixed points)
         if not vars(args).get("fixed_points", []):

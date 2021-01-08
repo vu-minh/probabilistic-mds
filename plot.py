@@ -30,7 +30,7 @@ def plot_losses(all_losses, titles=[], out_name="loss.png"):
     fig, axes = plt.subplots(3, 1, figsize=(6, 6))
     colors = [f"C{i+1}" for i in range(len(all_losses))]
     for ax, loss, title, color in zip(axes, all_losses, titles, colors):
-        ax.plot(loss[2:], c=color)
+        ax.plot(loss, c=color)
         ax.set_title(title)
     fig.tight_layout(pad=0.3)
     fig.savefig(out_name)
