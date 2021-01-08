@@ -140,7 +140,7 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     """
     # pack pair indices with distances
     all_pairs = list(combinations(range(N), 2))
-    dists_with_indices = list(zip(D, all_pairs))
+    all_dists_with_indices = list(zip(D, all_pairs))
     n_pairs = len(D)
     D_squareform = squareform(D)
 
@@ -155,11 +155,12 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     missing_percents = list(range(min_percent, max_percent, 5)) + [max_percent]
 
     for n_run in range(1, n_runs + 1):
+        print("RUN: ", n_run)
         for missing_percent in missing_percents:
             # create non-complete data: sample from pairwise distances
             n_used = int((1.0 - missing_percent / 100) * n_pairs)
-            dists_with_indices = random.sample(dists_with_indices, k=n_used)
-            print(f"[EXP missing pair] {len(dists_with_indices)} / {n_pairs}")
+            dists_with_indices = random.sample(all_dists_with_indices, k=n_used)
+            print(f"[EXP missing pair] {missing_percent}%: {n_used} / {n_pairs}")
 
             Z, [losses, _, _] = pmds_MAP2(
                 dists_with_indices,
@@ -250,4 +251,4 @@ if __name__ == "__main__":
 
     # multiple-runs mode: e.g.: run exp with different values for a param
     if args.multiple_runs_mode and args.exp_missing_pairs:
-        run_missing_pairs(D, N, args, labels)
+        run_missing_pairs(D, N, args, labels, n_runs=10, max_percent=95)
