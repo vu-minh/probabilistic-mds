@@ -5,7 +5,7 @@ import wandb
 
 import numpy as np
 from sklearn.manifold import MDS
-from scipy.spatial.distance import squareform
+from scipy.spatial.distance import pdist, squareform
 
 from pmds.pmds_MLE import pmds_MLE
 from pmds.pmds_MAP import pmds_MAP
@@ -148,8 +148,10 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     if not os.path.exists(embedding_dir):
         os.mkdir(embedding_dir)
 
-    # store score(s) for each run with the following header
-    score_logs = ["n_run, missing_percent, stress, loss"]
+    # write score logs to csv file for plotting/storing
+    score_file_name = f"{embedding_dir}/scores.csv"
+    score_file = open(score_file_name, "w")
+    score_file.write("n_run,missing_percent,stress,loss\n")
 
     # test with different setting of missing pairs
     missing_percents = list(range(min_percent, max_percent, 5)) + [max_percent]
@@ -172,12 +174,8 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
             if n_run == 0:
                 joblib.dump(Z, f"{embedding_dir}/{missing_percent}.z")
             stress = score.stress(D_squareform, Z)
-            score_logs.append(f"{n_run}, {missing_percent}, {stress}, {losses[-1]}")
-
-    # write score logs to csv file for plotting/storing
-    score_file_name = f"{embedding_dir}/scores.csv"
-    with open(score_file_name, "w") as score_file:
-        score_file.write("\n".join(score_logs))
+            score_file.write(f"{n_run}, {missing_percent}, {stress}, {losses[-1]}\n")
+    score_file.close()
 
 
 if __name__ == "__main__":
@@ -251,4 +249,8 @@ if __name__ == "__main__":
 
     # multiple-runs mode: e.g.: run exp with different values for a param
     if args.multiple_runs_mode and args.exp_missing_pairs:
-        run_missing_pairs(D, N, args, labels, n_runs=10, max_percent=95)
+        run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
+        plot.plot_score_with_missing_pairs(
+            f"embeddings/{dataset_name}/scores.csv",
+            out_name=f"{plot_dir}/score_with_missing_pairs.png",
+        )

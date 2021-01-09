@@ -490,7 +490,7 @@ pre_config = {
             learning_rate=2.25,
             sigma_local=1e-3,
             # missing_pairs=0.3,
-            random_state=2021,
+            random_state=42,
             std=False,  # digits already in [0, 1]
             pca=None,
         ),

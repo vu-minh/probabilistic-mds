@@ -3,6 +3,7 @@ import base64
 from io import BytesIO
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.colors import LinearSegmentedColormap
@@ -227,3 +228,39 @@ def generate_stacked_svg(svg_out_name, dataset, labels=None, default_cmap="gray_
             svg_file.write(SVG_IMG_TAG.format(i, i, fig_data))
 
         svg_file.write("</svg>")
+
+
+def stylize_axes(ax):
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    ax.xaxis.set_tick_params(top="off", direction="out", width=1)
+    ax.yaxis.set_tick_params(right="off", direction="out", width=1)
+
+
+def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
+    df = pd.read_csv(score_file_name)
+    print(df)
+    df_grouped = df.groupby(["missing_percent"], as_index=True)
+    df_summary = df_grouped.agg({"stress": ["mean", "std"]})
+    df_summary.columns = ["_".join(col) for col in df_summary.columns.values]
+    df_summary = df_summary.reset_index()
+    print(df_summary)
+
+    fig, ax = plt.subplots(1, 1, figsize=(5, 2.5))
+    # stylize_axes(ax)
+
+    df_summary.plot(
+        x="missing_percent",
+        y="stress_mean",
+        yerr="stress_std",
+        ax=ax,
+        legend=False,
+        # color="C1",
+        capsize=3,
+        capthick=1,
+        ecolor="orange",
+    )
+    ax.set_xlabel("percent of missing pair")
+    ax.set_ylabel("stress")
+    fig.savefig(out_name, bbox_inches="tight")
