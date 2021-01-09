@@ -256,11 +256,15 @@ def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
         yerr="stress_std",
         ax=ax,
         legend=False,
+        marker="o",
+        markersize=2,
         # color="C1",
         capsize=3,
         capthick=1,
         ecolor="orange",
     )
+
+    ax.tick_params(axis="y", direction="out", pad=-37)
     ax.set_xlabel("Percent of missing pairs")
     ax.set_ylabel("Metric MDS stress")
     fig.savefig(out_name, bbox_inches="tight")
