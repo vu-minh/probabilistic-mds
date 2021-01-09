@@ -249,7 +249,7 @@ if __name__ == "__main__":
 
     # multiple-runs mode: e.g.: run exp with different values for a param
     if args.multiple_runs_mode and args.exp_missing_pairs:
-        run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
+        # run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
         plot.plot_score_with_missing_pairs(
             f"embeddings/{dataset_name}/scores.csv",
             out_name=f"{plot_dir}/score_with_missing_pairs.png",

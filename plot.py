@@ -261,6 +261,6 @@ def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
         capthick=1,
         ecolor="orange",
     )
-    ax.set_xlabel("percent of missing pair")
-    ax.set_ylabel("stress")
+    ax.set_xlabel("Percent of missing pairs")
+    ax.set_ylabel("Metric MDS stress")
     fig.savefig(out_name, bbox_inches="tight")
