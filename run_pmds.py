@@ -37,7 +37,6 @@ def run_pdms(D, N, args, labels=None):
         print(f"[DEBUG] n_pairs={n_pairs}, incomplete data {len(dists_with_indices)}")
 
     # note: Original metric MDS (and its stress) use Euclidean distances,
-    # Probabilistic MDS uses Squared Euclidean distances.
     D_squareform = squareform(D)
 
     # original MDS
@@ -132,6 +131,24 @@ def run_pdms(D, N, args, labels=None):
     return Z1, dists_with_indices
 
 
+def run_original_MDS(D, args):
+    # note: Original metric MDS (and its stress) use Euclidean distances,
+    D_squareform = squareform(D)
+
+    # original MDS
+    Z0 = MDS(
+        dissimilarity="precomputed",
+        metric=True,
+        random_state=args.random_state,
+        n_init=10,
+        n_jobs=-1,
+        verbose=1,
+    ).fit_transform(D_squareform)
+
+    s0 = score.stress(D_squareform, Z0)
+    joblib.dump([Z0, s0], f"{embedding_dir}/original.z")
+
+
 def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=10):
     """Multiple runs for experiment with missing pairs.
     In one run, call pmds_MAP2 with different input of missing pairs
@@ -143,10 +160,6 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     all_dists_with_indices = list(zip(D, all_pairs))
     n_pairs = len(D)
     D_squareform = squareform(D)
-
-    embedding_dir = f"embeddings/{args.dataset_name}"
-    if not os.path.exists(embedding_dir):
-        os.mkdir(embedding_dir)
 
     # write score logs to csv file for plotting/storing
     score_file_name = f"{embedding_dir}/scores.csv"
@@ -171,9 +184,10 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
                 lr=args.learning_rate,
                 random_state=args.random_state + n_run,
             )
-            if n_run == 0:
-                joblib.dump(Z, f"{embedding_dir}/{missing_percent}.z")
             stress = score.stress(D_squareform, Z)
+            if n_run == 0:
+                joblib.dump([Z, stress], f"{embedding_dir}/{missing_percent}.z")
+
             score_file.write(f"{n_run}, {missing_percent}, {stress}, {losses[-1]}\n")
     score_file.close()
 
@@ -216,6 +230,7 @@ if __name__ == "__main__":
     args = argparse.Namespace(**args)
 
     plot_dir = f"plots/{method_name}/{dataset_name}"
+    embedding_dir = f"embeddings/{dataset_name}"
     if not os.path.exists(plot_dir):
         os.mkdir(plot_dir)
 
@@ -249,8 +264,15 @@ if __name__ == "__main__":
 
     # multiple-runs mode: e.g.: run exp with different values for a param
     if args.multiple_runs_mode and args.exp_missing_pairs:
+        # run_original_MDS(D, args)
         # run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
-        plot.plot_score_with_missing_pairs(
-            f"embeddings/{dataset_name}/scores.csv",
-            out_name=f"{plot_dir}/score_with_missing_pairs.png",
+        # plot.plot_score_with_missing_pairs(
+        #     f"{embedding_dir}/scores.csv",
+        #     out_name=f"{plot_dir}/score_with_missing_pairs.png",
+        # )
+        plot.plot_Z_with_missing_pairs(
+            embedding_dir=embedding_dir,
+            missing_percents=[0, 20, 50, 70, 90],
+            labels=labels,
+            out_name=f"{plot_dir}/Z_with_missing_pairs.png",
         )

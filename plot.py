@@ -1,13 +1,16 @@
 import math
 import base64
+import joblib
 from io import BytesIO
 
 import numpy as np
 import pandas as pd
+
 import matplotlib.pyplot as plt
 from matplotlib import rcParams
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.colors import to_rgb
+
 import plotly.express as px
 import plotly.graph_objects as go
 
@@ -267,4 +270,28 @@ def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
     ax.tick_params(axis="y", direction="out", pad=-37)
     ax.set_xlabel("Percent of missing pairs")
     ax.set_ylabel("Metric MDS stress")
+    fig.savefig(out_name, bbox_inches="tight")
+
+
+def plot_Z_with_missing_pairs(
+    embedding_dir, missing_percents, labels, out_name="all_Z.png"
+):
+    ncols = len(missing_percents) + 1
+    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=(3.5 * ncols, 3))
+    in_names = ["original"] + missing_percents
+
+    for i, (ax, percent) in enumerate(zip(axes.ravel(), in_names)):
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+        ax_idx = chr(ord("a") + i)
+        if percent == "original":
+            ax.set_xlabel(f"({ax_idx}) Original non-probabilistic MDS")
+        else:
+            ax.set_xlabel(f"({ax_idx}) PMDS with p={percent}%")
+
+        Z, stress = joblib.load(f"{embedding_dir}/{percent}.z")
+        ax.set_title(f"Stress = {stress:.2f}")
+        ax.scatter(*Z.T, c=labels, alpha=0.5, cmap="tab10")
+
     fig.savefig(out_name, bbox_inches="tight")
