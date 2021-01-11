@@ -171,7 +171,7 @@ if __name__ == "__main__":
     # plot_us_map(out_name=f"{plot_dir}/us_map.png")
 
     Z1, dists_with_indices, labels = joblib.load("./embeddings/cities_us_toy_MAP2.Z")
-    # plot_with_us_map_bg(Z1, city_names, out_name=f"{plot_dir}/cities_aligned.png")
+    plot_with_us_map_bg(Z1, city_names, out_name=f"{plot_dir}/cities_aligned.png")
 
     D, _ = list(zip(*dists_with_indices))
-    plot_original_MDS(D, city_names, out_name=f"{plot_dir}/original.png")
+    plot_original_MDS(D, city_names, out_name=f"{plot_dir}/cities_original.png")
