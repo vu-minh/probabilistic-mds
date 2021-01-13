@@ -216,8 +216,9 @@ if __name__ == "__main__":
     argm("--no_logging", action="store_true", help="Disable W&B / MLFlow logging")
     argm("--interactive", action="store_true", help="Using plotly for interactive")
     # other arguments for running differnt (specific) experiments
-    argm("--multiple_runs_mode", action="store_true", help="Multiple runs mode for exp")
+    argm("--experimemt_mode", action="store_true", help="Exp mode, e.g. multiple runs")
     argm("--exp_missing_pairs", action="store_true", help="Exp with missing pairs")
+    argm("--exp_automobile", action="store_true", help="Exp with automobile dataset")
 
     args = vars(parser.parse_args())
     dataset_name = args["dataset_name"]
@@ -247,7 +248,7 @@ if __name__ == "__main__":
     print("[PMDS] Load dataset: ", N, D.shape)
 
     # normal mode: run once
-    if not args.multiple_runs_mode:
+    if not args.experimemt_mode:
         if args.no_logging:
             print("Using params: ", args)
         else:
@@ -263,7 +264,7 @@ if __name__ == "__main__":
             )
 
     # multiple-runs mode: e.g.: run exp with different values for a param
-    if args.multiple_runs_mode and args.exp_missing_pairs:
+    if args.experimemt_mode and args.exp_missing_pairs:
         # run_original_MDS(D, args)
         # run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
         # plot.plot_score_with_missing_pairs(
@@ -275,4 +276,12 @@ if __name__ == "__main__":
             missing_percents=[0, 20, 50, 70, 90],
             labels=labels,
             out_name=f"{plot_dir}/Z_with_missing_pairs.png",
+        )
+
+    if args.experimemt_mode and args.exp_automobile:
+        # load / re-run
+        plot.plot_automobile_dataset(
+            embedding_dir=embedding_dir,
+            labels=labels,
+            out_name=f"{plot_dir}/automobile.png",
         )

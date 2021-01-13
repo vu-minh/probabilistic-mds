@@ -295,3 +295,9 @@ def plot_Z_with_missing_pairs(
         ax.scatter(*Z.T, c=labels, alpha=0.5, cmap="tab10")
 
     fig.savefig(out_name, bbox_inches="tight")
+
+
+def plot_automobile_dataset(embedding_dir, labels, out_name="automobile.png"):
+    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
+    print(labels)
+    fig.savefig(out_name, bbox_inches="tight")
