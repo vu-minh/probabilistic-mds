@@ -65,7 +65,7 @@ CONFIG = {
         learning_rate=1.0,
         sigma_local=1e-3,
         # missing_pairs=0.0,
-        sigma_fix=1e-3,
+        sigma_fix=1e-2,
     ),
 }
 
@@ -86,7 +86,7 @@ def run_pmds(dataset_name, current_Z=None, fixed_points=[]):
     args = argparse.Namespace(**CONFIG.get(dataset_name, DEFAULT_CONFIG))
     print("[DASH APP] Using config: ", args)
 
-    Z, Z1_std, all_losses, all_mu = pmds_MAP2(
+    Z, _ = pmds_MAP2(
         input_dists_with_indices,
         n_samples=len(Z_init),
         n_components=2,

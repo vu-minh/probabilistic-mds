@@ -192,6 +192,50 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     score_file.close()
 
 
+def run_automobile(args):
+    # load initialization embedding
+    Z0, dists_with_indices, labels = joblib.load(
+        f"embeddings/{dataset_name}_{method_name}.Z"
+    )
+
+    # load or re-create embedding with fixed points
+    Z1_name = f"embeddings/{dataset_name}_fixed.Z"
+    if not os.path.exists(Z1_name) or args.exp_re_run:
+        fixed_points = vars(args).get("fixed_points", [])
+        if type(fixed_points) == str:
+            with open(fixed_points, "r") as in_file:
+                fixed_points = json.load(in_file)
+
+        Z1, _ = pmds_MAP2(
+            dists_with_indices,
+            n_samples=len(labels),
+            epochs=args.epochs,
+            lr=args.learning_rate,
+            random_state=args.random_state,
+            sigma_local=args.sigma_local,
+            sigma_fix=args.sigma_fix,
+            fixed_points=fixed_points,
+        )
+        joblib.dump([Z1, fixed_points], Z1_name)
+    else:
+        Z1, fixed_points = joblib.load(Z1_name)
+
+    # compare the stresses
+    D, _ = list(zip(*dists_with_indices))
+    D_squareform = squareform(D)
+    stress0 = score.stress(D_squareform, Z0)
+    stress1 = score.stress(D_squareform, Z1)
+
+    plot.plot_automobile_dataset(
+        Z0,
+        Z1,
+        fixed_points,
+        labels=labels,
+        stresses=[stress0, stress1],
+        out_name=f"{plot_dir}/automobile.png",
+    )
+
+
 if __name__ == "__main__":
     import os
     import joblib
@@ -216,7 +260,8 @@ if __name__ == "__main__":
     argm("--no_logging", action="store_true", help="Disable W&B / MLFlow logging")
     argm("--interactive", action="store_true", help="Using plotly for interactive")
     # other arguments for running differnt (specific) experiments
-    argm("--experimemt_mode", action="store_true", help="Exp mode, e.g. multiple runs")
+    argm("--experiment_mode", action="store_true", help="Exp mode, e.g. multiple runs")
+    argm("--exp_re_run", action="store_true", help="Re run the experiments?")
     argm("--exp_missing_pairs", action="store_true", help="Exp with missing pairs")
     argm("--exp_automobile", action="store_true", help="Exp with automobile dataset")
 
@@ -232,8 +277,9 @@ if __name__ == "__main__":
 
     plot_dir = f"plots/{method_name}/{dataset_name}"
     embedding_dir = f"embeddings/{dataset_name}"
-    if not os.path.exists(plot_dir):
-        os.mkdir(plot_dir)
+    for a_dir in [plot_dir, embedding_dir]:
+        if not os.path.exists(a_dir):
+            os.mkdir(a_dir)
 
     # load pairwise Euclidean distances
     dataset.ALWAYS_REGENERATE_SVG = False
@@ -248,7 +294,7 @@ if __name__ == "__main__":
     print("[PMDS] Load dataset: ", N, D.shape)
 
     # normal mode: run once
-    if not args.experimemt_mode:
+    if not args.experiment_mode:
         if args.no_logging:
             print("Using params: ", args)
         else:
@@ -264,13 +310,15 @@ if __name__ == "__main__":
             )
 
     # multiple-runs mode: e.g.: run exp with different values for a param
-    if args.experimemt_mode and args.exp_missing_pairs:
-        # run_original_MDS(D, args)
-        # run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
-        # plot.plot_score_with_missing_pairs(
-        #     f"{embedding_dir}/scores.csv",
-        #     out_name=f"{plot_dir}/score_with_missing_pairs.png",
-        # )
+    if args.experiment_mode and args.exp_missing_pairs:
+        if args.exp_re_run:
+            run_original_MDS(D, args)
+            run_missing_pairs(D, N, args, labels, n_runs=20, max_percent=95)
+
+        plot.plot_score_with_missing_pairs(
+            f"{embedding_dir}/scores.csv",
+            out_name=f"{plot_dir}/score_with_missing_pairs.png",
+        )
         plot.plot_Z_with_missing_pairs(
             embedding_dir=embedding_dir,
             missing_percents=[0, 20, 50, 70, 90],
@@ -278,10 +326,5 @@ if __name__ == "__main__":
             out_name=f"{plot_dir}/Z_with_missing_pairs.png",
         )
 
-    if args.experimemt_mode and args.exp_automobile:
-        # load / re-run
-        plot.plot_automobile_dataset(
-            embedding_dir=embedding_dir,
-            labels=labels,
-            out_name=f"{plot_dir}/automobile.png",
-        )
+    if args.experiment_mode and args.exp_automobile:
+        run_automobile(args)

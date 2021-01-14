@@ -297,7 +297,24 @@ def plot_Z_with_missing_pairs(
     fig.savefig(out_name, bbox_inches="tight")
 
 
-def plot_automobile_dataset(embedding_dir, labels, out_name="automobile.png"):
-    fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-    print(labels)
+def plot_automobile_dataset(
+    Z0, Z1, fixed_points, labels, stresses, out_name="automobile.png"
+):
+    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+    marker_styles = [
+        dict(marker="^", color="gray", edgecolor="blue"),  # 0: 4-door, many cyl
+        dict(marker="^", color="white", edgecolor="blue"),  # 1: 2-door, many cyl
+        dict(marker="o", color="gray", edgecolor="black"),  # 2: 4-door, few cyl
+        dict(marker="o", color="white", edgecolor="black"),  # 3: 2-door, few cyl
+    ]
+
+    def _scatter(ax, Z):
+        for lbl in np.unique(labels):
+            ax.scatter(*Z[labels == lbl].T, s=64, **marker_styles[lbl])
+
+    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
+        _scatter(ax, Z)
+        ax.set_title(f"Stress: {stress:.2f}")
+
     fig.savefig(out_name, bbox_inches="tight")
