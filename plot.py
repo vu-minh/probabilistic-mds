@@ -297,24 +297,64 @@ def plot_Z_with_missing_pairs(
     fig.savefig(out_name, bbox_inches="tight")
 
 
+def show_coordinate_axes(ax):
+    ax.axhline(y=0, color="k", linestyle="--", alpha=0.7, zorder=99)
+    ax.axvline(x=0, color="k", linestyle="--", alpha=0.7, zorder=99)
+
+
+def show_fixed_points(ax, src_pos=None, des_pos=None):
+    # show arrow from src to des
+    if src_pos is not None and des_pos is not None:
+        for src, des in zip(src_pos, des_pos):
+            ax.annotate(
+                text="",
+                xy=src,
+                xytext=des,
+                arrowprops=dict(arrowstyle="<-", linestyle="--"),
+                zorder=101,
+            )
+
+    # show src points
+    if src_pos is not None:
+        ax.scatter(
+            *src_pos.T, marker="+", s=128, color="orange", linewidths=3, zorder=100
+        )
+
+    # show des points
+    if des_pos is not None:
+        ax.scatter(
+            *des_pos.T, marker="o", s=128, color="orange", facecolor="white", zorder=100
+        )
+
+
 def plot_automobile_dataset(
     Z0, Z1, fixed_points, labels, stresses, out_name="automobile.png"
 ):
-    fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
 
     marker_styles = [
-        dict(marker="^", color="gray", edgecolor="blue"),  # 0: 4-door, many cyl
-        dict(marker="^", color="white", edgecolor="blue"),  # 1: 2-door, many cyl
-        dict(marker="o", color="gray", edgecolor="black"),  # 2: 4-door, few cyl
-        dict(marker="o", color="white", edgecolor="black"),  # 3: 2-door, few cyl
+        dict(
+            marker="^", color="#D0D0D0", edgecolor="#4863A0", zorder=10
+        ),  # 0: 4-door, many cyl
+        dict(
+            marker="^", color="white", edgecolor="#4863A0", zorder=9
+        ),  # 1: 2-door, many cyl
+        dict(marker="o", color="#D0D0D0", edgecolor="#2F4F4F"),  # 2: 4-door, few cyl
+        dict(marker="o", color="white", edgecolor="#2F4F4F"),  # 3: 2-door, few cyl
     ]
 
     def _scatter(ax, Z):
         for lbl in np.unique(labels):
-            ax.scatter(*Z[labels == lbl].T, s=64, **marker_styles[lbl])
+            ax.scatter(*Z[labels == lbl].T, s=128, **marker_styles[lbl])
+            show_coordinate_axes(ax)
+
+    fixed_indices, des_pos = list(zip(*fixed_points))
+    src_pos = Z0[fixed_indices, :]
+    des_pos = np.array(des_pos)
 
     for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
         _scatter(ax, Z)
+        show_fixed_points(ax, src_pos=src_pos if i == 0 else None, des_pos=des_pos)
         ax.set_title(f"Stress: {stress:.2f}")
 
     fig.savefig(out_name, bbox_inches="tight")
