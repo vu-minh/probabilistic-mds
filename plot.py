@@ -297,40 +297,14 @@ def plot_Z_with_missing_pairs(
     fig.savefig(out_name, bbox_inches="tight")
 
 
-def show_coordinate_axes(ax):
-    ax.axhline(y=0, color="k", linestyle="--", alpha=0.7, zorder=99)
-    ax.axvline(x=0, color="k", linestyle="--", alpha=0.7, zorder=99)
-
-
-def show_fixed_points(ax, src_pos=None, des_pos=None):
-    # show arrow from src to des
-    if src_pos is not None and des_pos is not None:
-        for src, des in zip(src_pos, des_pos):
-            ax.annotate(
-                text="",
-                xy=src,
-                xytext=des,
-                arrowprops=dict(arrowstyle="<-", linestyle="--"),
-                zorder=101,
-            )
-
-    # show src points
-    if src_pos is not None:
-        ax.scatter(
-            *src_pos.T, marker="+", s=128, color="orange", linewidths=3, zorder=100
-        )
-
-    # show des points
-    if des_pos is not None:
-        ax.scatter(
-            *des_pos.T, marker="o", s=128, color="orange", facecolor="white", zorder=100
-        )
-
-
 def plot_automobile_dataset(
     Z0, Z1, fixed_points, labels, stresses, out_name="automobile.png"
 ):
     fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+    # TODO make grid 4x4, 4x4, 1x3 legend and 3x3 axes meaning
+    Z = np.concatenate((Z0, Z1), axis=0)
+    xlims = 1.1 * np.percentile(Z[:, 0], [0, 100])
+    ylims = 1.1 * np.percentile(Z[:, 1], [0, 100])
 
     marker_styles = [
         dict(
@@ -346,15 +320,59 @@ def plot_automobile_dataset(
     def _scatter(ax, Z):
         for lbl in np.unique(labels):
             ax.scatter(*Z[labels == lbl].T, s=128, **marker_styles[lbl])
-            show_coordinate_axes(ax)
+            _show_coordinate_axes(ax)
+
+    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
+        _scatter(ax, Z)
+        ax.set_xlim(xlims)
+        ax.set_ylim(ylims)
+        ax.set_title(f"Stress: {stress:.2f}")
 
     fixed_indices, des_pos = list(zip(*fixed_points))
     src_pos = Z0[fixed_indices, :]
     des_pos = np.array(des_pos)
+    _show_moved_points(axes[0], src_pos, des_pos)
 
-    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
-        _scatter(ax, Z)
-        show_fixed_points(ax, src_pos=src_pos if i == 0 else None, des_pos=des_pos)
-        ax.set_title(f"Stress: {stress:.2f}")
+    style_fixed_points = [marker_styles[labels[i]] for i in fixed_indices]
+    _show_fixed_points(axes[1], np.array(Z1)[list(fixed_indices)], style_fixed_points)
 
     fig.savefig(out_name, bbox_inches="tight")
+
+
+def _show_coordinate_axes(ax):
+    ax.axhline(y=0, color="#A9A9A9", linestyle="--", alpha=0.4, zorder=99)
+    ax.axvline(x=0, color="#A9A9A9", linestyle="--", alpha=0.4, zorder=99)
+
+
+def _show_moved_points(ax, src_pos, des_pos):
+    # show arrow from src to des
+    for src, des in zip(src_pos, des_pos):
+        ax.annotate(
+            text="",
+            xy=src,
+            xytext=des,
+            arrowprops=dict(arrowstyle="<-", linestyle="--"),
+            zorder=998,
+        )
+
+    # show source points
+    ax.scatter(*src_pos.T, marker="+", s=64, color="#800080", linewidths=3, zorder=999)
+
+    # show destination points
+    ax.scatter(
+        *des_pos.T,
+        marker="o",
+        s=48,
+        color="#800080",
+        facecolor="white",
+        linestyle="--",
+        alpha=0.35,
+        zorder=999,
+    ),
+
+
+def _show_fixed_points(ax, points, styles):
+    for [x, y], style in zip(points, styles):
+        style.update(dict(edgecolor="#800080", zorder=999))
+        ax.scatter(x, y, s=128, **style)
+        ax.scatter(x, y, s=64, color="#800080", marker="+", linewidths=3, zorder=1000)

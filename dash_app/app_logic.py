@@ -65,7 +65,7 @@ CONFIG = {
         learning_rate=1.0,
         sigma_local=1e-3,
         # missing_pairs=0.0,
-        sigma_fix=1e-2,
+        sigma_fix=1e-3,
     ),
 }
 
