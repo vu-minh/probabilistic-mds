@@ -387,15 +387,14 @@ def plot_image_dataset(
 ):
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    fig = plt.figure(figsize=(16, 6))
-    gs = fig.add_gridspec(1, 11)
-    ax0 = fig.add_subplot(gs[0, 0:4])
-    ax1 = fig.add_subplot(gs[0, 4:8])
-    ax2 = fig.add_subplot(gs[0, 8:])
+    fig = plt.figure(figsize=(14.5, 6))
+    gs = fig.add_gridspec(1, 13)
+    ax0 = fig.add_subplot(gs[0, 0:5])
+    ax1 = fig.add_subplot(gs[0, 5:10])
 
     Z = np.concatenate((Z0, Z1), axis=0)
-    xlims = 1.05 * np.percentile(Z[:, 0], [0, 100])
-    ylims = 1.05 * np.percentile(Z[:, 1], [0, 100])
+    xlims = 1.075 * np.percentile(Z[:, 0], [0, 100])
+    ylims = 1.075 * np.percentile(Z[:, 1], [0, 100])
 
     X = joblib.load(f"./embeddings/{dataset_name}_data.Z")
     img_size = int(math.sqrt(X.shape[1]))
@@ -423,11 +422,22 @@ def plot_image_dataset(
         _scatter_image(ax, Z, fixed_indices=fixed_indices)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
-        ax.set_title(f"Stress: {stress:.2f}")
+        ax.text(
+            0.02, 0.95, f"Stress: {stress:.2f}", transform=ax.transAxes, fontsize=18
+        )
+        if dataset_name == "fmnist":
+            ax_idx = chr(ord("a") + i)
+            ax.text(0.05, 0.05, f"({ax_idx})", transform=ax.transAxes, fontsize=24)
 
     _show_moved_points(ax0, Z0[fixed_indices, :], np.array(des_pos), annote_src=False)
 
-    ax2.axis("off")
-    ax2.set_title("Legend")
+    if dataset_name == "fmnist":
+        ax2 = fig.add_subplot(gs[0, 10:])
+        ax2.axis("off")
+        ax2.set_title("Interpretation of axes", fontsize=18)
+        ax2.text(x=0.05, y=0.05, s="(c)", transform=ax2.transAxes, fontsize=24)
+        axes_img = plt.imread(f"./plots/MAP2/fmnist/axes.png")
+        img_pos = [-1.0, 1.0, -1.0, 1.0]
+        ax2.imshow(axes_img, extent=img_pos)
 
     fig.savefig(out_name, bbox_inches="tight")
