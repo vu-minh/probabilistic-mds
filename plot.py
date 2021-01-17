@@ -297,6 +297,17 @@ def plot_Z_with_missing_pairs(
     fig.savefig(out_name, bbox_inches="tight")
 
 
+def plot_scatter_with_fixed_points(
+    dataset_name, Z0, Z1, fixed_points, labels, stresses, out_name
+):
+    if dataset_name == "automobile":
+        plot_automobile_dataset(Z0, Z1, fixed_points, labels, stresses, out_name)
+    elif dataset_name.startswith(("digits", "mnist")):
+        plot_image_dataset(
+            dataset_name, Z0, Z1, fixed_points, labels, stresses, out_name
+        )
+
+
 def plot_automobile_dataset(
     Z0, Z1, fixed_points, labels, stresses, out_name="automobile.png"
 ):
@@ -376,3 +387,25 @@ def _show_fixed_points(ax, points, styles):
         style.update(dict(edgecolor="#800080", zorder=999))
         ax.scatter(x, y, s=128, **style)
         ax.scatter(x, y, s=64, color="#800080", marker="+", linewidths=3, zorder=1000)
+
+
+def plot_image_dataset(
+    dataset_name, Z0, Z1, fixed_points, labels, stresses, out_name="Z.png"
+):
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+    # TODO make grid 4x4, 4x4, 1x3 legend and 3x3 axes meaning
+    Z = np.concatenate((Z0, Z1), axis=0)
+    xlims = 1.1 * np.percentile(Z[:, 0], [0, 100])
+    ylims = 1.1 * np.percentile(Z[:, 1], [0, 100])
+
+    def _scatter_image(ax, Z, X):
+        img = plt.imread(f"./embeddings/{dataset_name}_gray.svg#0")
+        ax.imshow(img)
+
+    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
+        _scatter_image(ax, Z, X)
+        ax.set_xlim(xlims)
+        ax.set_ylim(ylims)
+        ax.set_title(f"Stress: {stress:.2f}")
+
+    fig.savefig(out_name, bbox_inches="tight")

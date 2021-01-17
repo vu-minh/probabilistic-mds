@@ -192,7 +192,7 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
     score_file.close()
 
 
-def run_automobile(args):
+def run_with_fixed_points(args):
     # load initialization embedding
     Z0, dists_with_indices, labels = joblib.load(
         f"embeddings/{dataset_name}_{method_name}.Z"
@@ -226,13 +226,14 @@ def run_automobile(args):
     stress0 = score.stress(D_squareform, Z0)
     stress1 = score.stress(D_squareform, Z1)
 
-    plot.plot_automobile_dataset(
+    plot.plot_scatter_with_fixed_points(
+        dataset_name,
         Z0,
         Z1,
         fixed_points,
         labels=labels,
         stresses=[stress0, stress1],
-        out_name=f"{plot_dir}/automobile.png",
+        out_name=f"{plot_dir}/{dataset_name}.png",
     )
 
 
@@ -263,7 +264,7 @@ if __name__ == "__main__":
     argm("--experiment_mode", action="store_true", help="Exp mode, e.g. multiple runs")
     argm("--exp_re_run", action="store_true", help="Re run the experiments?")
     argm("--exp_missing_pairs", action="store_true", help="Exp with missing pairs")
-    argm("--exp_automobile", action="store_true", help="Exp with automobile dataset")
+    argm("--exp_with_fixed_points", action="store_true", help="Exp with fixed points")
 
     args = vars(parser.parse_args())
     dataset_name = args["dataset_name"]
@@ -326,5 +327,5 @@ if __name__ == "__main__":
             out_name=f"{plot_dir}/Z_with_missing_pairs.png",
         )
 
-    if args.experiment_mode and args.exp_automobile:
-        run_automobile(args)
+    if args.experiment_mode and args.exp_with_fixed_points:
+        run_with_fixed_points(args)

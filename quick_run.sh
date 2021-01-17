@@ -11,5 +11,5 @@
 # python run_pmds.py -m MAP2 --use_pre_config --normalize_dists --no_logging -d digits5 --experiment_mode --exp_missing_pairs
 
 
-# reproduce figure for automobile: 
-# python run_pmds.py -m MAP2 --no_logging --normalize_dists --use_pre_config -d automobile --experiment_mode --exp_automobile
+# reproduce figure for other datasets with fixed points
+# python run_pmds.py -m MAP2 --no_logging --normalize_dists --use_pre_config -d automobile --experiment_mode --exp_with_fixed_points
