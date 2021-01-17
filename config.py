@@ -502,11 +502,30 @@ pre_config = {
             epochs=150,
             learning_rate=2.25,
             sigma_local=1e-3,
+            sigma_fix=1e-3,
             # missing_pairs=0.0,
             random_state=2021,
             std=False,  # digits already in [0, 1]
             pca=None,
-            fixed_points=[],
+            # fixed_points="embeddings/fmnist.json",
+            fixed_points=[
+                # top, pull
+                (4, [0.06, 0.58]),  #
+                (209, [0.0, 0.59]),  #
+                (234, [-0.06, 0.58]),  #
+                # trouses, left
+                (86, [-0.6, 0.06]),  #
+                (208, [-0.67, 0.0]),  #
+                (215, [-0.61, -0.06]),  #
+                # bottom, sandals
+                (37, [0.0, -0.56]),  #
+                (132, [0.06, -0.54]),  #
+                (42, [-0.06, -0.52]),  #
+                # bags, right
+                (225, [0.59, -0.06]),  #
+                (126, [0.63, 0.0]),  #
+                (85, [0.61, 0.07]),  #
+            ],
             # epochs_mds=20,
             # learning_rate_mds=20,
             # batch_size_mds=500,

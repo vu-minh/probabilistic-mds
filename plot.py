@@ -302,7 +302,7 @@ def plot_scatter_with_fixed_points(
 ):
     if dataset_name == "automobile":
         plot_automobile_dataset(Z0, Z1, fixed_points, labels, stresses, out_name)
-    elif dataset_name.startswith(("digits", "mnist")):
+    elif dataset_name.startswith(("digits", "fmnist")):
         plot_image_dataset(
             dataset_name, Z0, Z1, fixed_points, labels, stresses, out_name
         )
@@ -331,9 +331,9 @@ def plot_automobile_dataset(
     def _scatter(ax, Z):
         for lbl in np.unique(labels):
             ax.scatter(*Z[labels == lbl].T, s=128, **marker_styles[lbl])
-            _show_coordinate_axes(ax)
 
     for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
+        _style_axes(ax, show_coordinates=True, hide_ticks=False)
         _scatter(ax, Z)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
@@ -350,36 +350,29 @@ def plot_automobile_dataset(
     fig.savefig(out_name, bbox_inches="tight")
 
 
-def _show_coordinate_axes(ax):
-    ax.axhline(y=0, color="#A9A9A9", linestyle="--", alpha=0.4, zorder=99)
-    ax.axvline(x=0, color="#A9A9A9", linestyle="--", alpha=0.4, zorder=99)
+def _style_axes(ax, show_coordinates=True, hide_ticks=False):
+    if show_coordinates:
+        ax.axhline(y=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
+        ax.axvline(x=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
+    if hide_ticks:
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
 
 
-def _show_moved_points(ax, src_pos, des_pos):
+def _show_moved_points(ax, src_pos, des_pos, annote_src=True, annote_des=True):
     # show arrow from src to des
+    arrowprops = dict(arrowstyle="<-", linestyle="--")
     for src, des in zip(src_pos, des_pos):
-        ax.annotate(
-            text="",
-            xy=src,
-            xytext=des,
-            arrowprops=dict(arrowstyle="<-", linestyle="--"),
-            zorder=998,
-        )
+        ax.annotate(text="", xy=src, xytext=des, arrowprops=arrowprops, zorder=998)
 
     # show source points
-    ax.scatter(*src_pos.T, marker="+", s=64, color="#800080", linewidths=3, zorder=999)
+    if annote_src:
+        ax.scatter(*src_pos.T, marker="+", s=64, c="#800080", linewidths=3, zorder=999)
 
-    # show destination points
-    ax.scatter(
-        *des_pos.T,
-        marker="o",
-        s=48,
-        color="#800080",
-        facecolor="white",
-        linestyle="--",
-        alpha=0.35,
-        zorder=999,
-    ),
+    if annote_des:
+        # show destination points
+        style = dict(facecolor="white", linestyle="--", alpha=0.35)
+        ax.scatter(*des_pos.T, marker="o", s=48, color="#800080", zorder=999, **style)
 
 
 def _show_fixed_points(ax, points, styles):
@@ -392,20 +385,49 @@ def _show_fixed_points(ax, points, styles):
 def plot_image_dataset(
     dataset_name, Z0, Z1, fixed_points, labels, stresses, out_name="Z.png"
 ):
-    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
-    # TODO make grid 4x4, 4x4, 1x3 legend and 3x3 axes meaning
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+
+    fig = plt.figure(figsize=(16, 6))
+    gs = fig.add_gridspec(1, 11)
+    ax0 = fig.add_subplot(gs[0, 0:4])
+    ax1 = fig.add_subplot(gs[0, 4:8])
+    ax2 = fig.add_subplot(gs[0, 8:])
+
     Z = np.concatenate((Z0, Z1), axis=0)
-    xlims = 1.1 * np.percentile(Z[:, 0], [0, 100])
-    ylims = 1.1 * np.percentile(Z[:, 1], [0, 100])
+    xlims = 1.05 * np.percentile(Z[:, 0], [0, 100])
+    ylims = 1.05 * np.percentile(Z[:, 1], [0, 100])
 
-    def _scatter_image(ax, Z, X):
-        img = plt.imread(f"./embeddings/{dataset_name}_gray.svg#0")
-        ax.imshow(img)
+    X = joblib.load(f"./embeddings/{dataset_name}_data.Z")
+    img_size = int(math.sqrt(X.shape[1]))
+    X = X.reshape(-1, img_size, img_size)
 
-    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
-        _scatter_image(ax, Z, X)
+    def _scatter_image(ax, Z, zoom=0.375, cmap="binary", fixed_indices=[]):
+        def _add_artist(img, pos, **style):
+            ab = AnnotationBbox(OffsetImage(img, zoom=zoom, cmap=cmap), pos, **style)
+            ax.add_artist(ab)
+
+        # draw not selected points first
+        for i, [img, pos] in enumerate(zip(X, Z)):
+            if i not in fixed_indices:
+                _add_artist(img, pos, frameon=False)
+
+        # draw selected point after to be appeared on top
+        highlighted = dict(pad=0.25, frameon=True, bboxprops=dict(edgecolor="#800080"))
+        for i in fixed_indices:
+            _add_artist(X[i], Z[i], **highlighted)
+
+    fixed_indices, des_pos = list(zip(*fixed_points))
+
+    for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
+        _style_axes(ax, show_coordinates=True, hide_ticks=(i > 0))
+        _scatter_image(ax, Z, fixed_indices=fixed_indices)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
         ax.set_title(f"Stress: {stress:.2f}")
+
+    _show_moved_points(ax0, Z0[fixed_indices, :], np.array(des_pos), annote_src=False)
+
+    ax2.axis("off")
+    ax2.set_title("Legend")
 
     fig.savefig(out_name, bbox_inches="tight")

@@ -228,8 +228,8 @@ def run_with_fixed_points(args):
 
     plot.plot_scatter_with_fixed_points(
         dataset_name,
-        Z0,
-        Z1,
+        np.array(Z0),
+        np.array(Z1),
         fixed_points,
         labels=labels,
         stresses=[stress0, stress1],

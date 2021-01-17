@@ -113,6 +113,9 @@ def load_traditional_dataset(
         *load_func(return_X_y=True), n_samples=n_samples, random_state=random_state
     )
     if dataset_name.startswith(("digits", "mnist", "fashion", "fmnist")):
+        # save the dataset for replotting the images
+        joblib.dump(X, f"./embeddings/{dataset_name}_data.Z")
+        # save svg image of the whole dataset for dash_app
         image_types = ["gray", "color"]
         for image_type in image_types:
             image_name = f"./embeddings/{dataset_name}_{image_type}.svg"
