@@ -453,13 +453,16 @@ def plot_automobile_dataset(
     fig.savefig(out_name, bbox_inches="tight")
 
 
-def _style_axes(ax, show_coordinates=True, hide_ticks=False):
+def _style_axes(ax, show_coordinates=True, hide_ticks=False, y_tick_right=False):
     if show_coordinates:
         ax.axhline(y=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
         ax.axvline(x=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
     if hide_ticks:
-        ax.xaxis.set_visible(False)
+        # ax.xaxis.set_visible(False)
         ax.yaxis.set_visible(False)
+    if y_tick_right:
+        ax.yaxis.set_label_position("right")
+        ax.yaxis.tick_right()
 
 
 def _show_moved_points(ax, src_pos, des_pos, annote_src=True, annote_des=True):
@@ -522,20 +525,29 @@ def plot_image_dataset(
 
     fixed_indices, des_pos = list(zip(*fixed_points))
     if dataset_name == "fmnist":
-        zoom = 0.3
+        zoom = 0.25
         annotation_pos = (0.02, 0.94)
     else:
         zoom = 0.75
         annotation_pos = (0.54, 0.94)
 
     for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
-        _style_axes(ax, show_coordinates=True, hide_ticks=(i > 0))
+        hide_ticks = (dataset_name == "fmnist") and (i > 0)
+        y_tick_right = (dataset_name == "digits5") and (i > 0)
+        _style_axes(
+            ax, show_coordinates=True, hide_ticks=hide_ticks, y_tick_right=y_tick_right
+        )
+
         _scatter_image(ax, Z, zoom=zoom, fixed_indices=fixed_indices)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
-        ax.text(
-            *annotation_pos, f"Stress:{stress:.2f}", transform=ax.transAxes, fontsize=14
-        )
+        if stress is not None:
+            ax.text(
+                *annotation_pos,
+                f"Stress:{stress:.2f}",
+                transform=ax.transAxes,
+                fontsize=14,
+            )
         if dataset_name == "fmnist":
             ax_idx = chr(ord("a") + i)
             ax.text(0.02, 0.05, f"({ax_idx})", transform=ax.transAxes, fontsize=20)

@@ -193,19 +193,64 @@ def run_missing_pairs(D, N, args, labels, n_runs=1, min_percent=0, max_percent=1
 
 
 def run_with_fixed_points(args):
-    # load initialization embedding
+    """Run exp with fixed points. Compare 2 embeddings:
+        + initial Z0 without fixed points
+        + new embedding Z1 with fixed points
+    Always need the complete dataset to compute stress.
+    In the incomplete data setting, still need access to the complete data.
+    Thus re-create the new dataset with missing pairs and re-run PMDS for Z0.
+    """
+    # load initialization embedding (no fixed points, no missing)
     Z0, dists_with_indices, labels = joblib.load(
         f"embeddings/{dataset_name}_{method_name}.Z"
     )
+    print("[EXP] Load Z0: ", len(dists_with_indices))
 
-    # load or re-create embedding with fixed points
-    Z1_name = f"embeddings/{dataset_name}_fixed.Z"
+    # prepare square matrix of pairwise distance
+    D, _ = list(zip(*dists_with_indices))
+    D_squareform = squareform(D)
+
+    # Z0: in case of missing pairs
+    missing_pairs = int(100 * vars(args).get("missing_pairs", 0))
+    print("[EXP] missing pairs: ", missing_pairs)
+    if missing_pairs > 0.0:
+        n_used = int((100 - missing_pairs) / 100 * len(dists_with_indices))
+        # note: side-effect here when reassign `dists_with_indices` inplace
+        dists_with_indices = random.sample(dists_with_indices, k=n_used)
+
+        # re-run PMDS without fixed points to obtain initial embedding
+        Z0_name = f"embeddings/{dataset_name}_{missing_pairs}.Z"
+        print("[EXP] Rerun Z0: ", Z0_name, len(dists_with_indices))
+        if not os.path.exists(Z0_name) or args.exp_re_run:
+            Z0, _ = pmds_MAP2(
+                dists_with_indices,
+                n_samples=len(labels),
+                epochs=args.epochs,
+                lr=args.learning_rate,
+                random_state=args.random_state,
+                sigma_local=args.sigma_local,
+                sigma_fix=args.sigma_fix,
+                fixed_points=[],
+            )
+            joblib.dump(Z0, Z0_name)
+        else:
+            Z0 = joblib.load(Z0_name)
+
+    # Z1: load or re-create embedding with fixed points
+    if missing_pairs > 0:
+        Z1_name = f"embeddings/{dataset_name}_{missing_pairs}_fixed.Z"
+        out_name = f"{plot_dir}/{dataset_name}_{missing_pairs}.png"
+    else:
+        Z1_name = f"embeddings/{dataset_name}_fixed.Z"
+        out_name = f"{plot_dir}/{dataset_name}.png"
+
+    print("[EXP] Rerun Z1 with fixed points: ", Z1_name, len(dists_with_indices))
     if not os.path.exists(Z1_name) or args.exp_re_run:
         fixed_points = vars(args).get("fixed_points", [])
         if type(fixed_points) == str:
             with open(fixed_points, "r") as in_file:
                 fixed_points = json.load(in_file)
-
+        # note: if missing paires, the input pairs should be exactly the pairs for Z0
         Z1, _ = pmds_MAP2(
             dists_with_indices,
             n_samples=len(labels),
@@ -221,8 +266,6 @@ def run_with_fixed_points(args):
         Z1, fixed_points = joblib.load(Z1_name)
 
     # compare the stresses
-    D, _ = list(zip(*dists_with_indices))
-    D_squareform = squareform(D)
     stress0 = score.stress(D_squareform, Z0)
     stress1 = score.stress(D_squareform, Z1)
 
@@ -233,7 +276,7 @@ def run_with_fixed_points(args):
         fixed_points,
         labels=labels,
         stresses=[stress0, stress1],
-        out_name=f"{plot_dir}/{dataset_name}.png",
+        out_name=out_name,
     )
 
 
