@@ -366,7 +366,7 @@ def _plot_automobile_legend(ax):
 
 
 def _plot_automobile_axes_names(ax, marker_styles):
-    _style_axes(ax, show_coordinates=False, hide_ticks=True)
+    _style_axes(ax, show_coordinates=False, hide_y_ticks=True, hide_x_ticks=True)
     ax.set_title("Interpretation of axes")
     for spine in ax.spines.values():
         spine.set_linestyle("-.")
@@ -445,7 +445,7 @@ def plot_automobile_dataset(
             ax.scatter(*Z[labels == lbl].T, s=128, **marker_styles[lbl])
 
     for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
-        _style_axes(ax, show_coordinates=True, hide_ticks=(i > 0))
+        _style_axes(ax, show_coordinates=True, hide_y_ticks=(i > 0))
         _scatter(ax, Z)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
@@ -467,12 +467,19 @@ def plot_automobile_dataset(
     fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
-def _style_axes(ax, show_coordinates=True, hide_ticks=False, y_tick_right=False):
+def _style_axes(
+    ax,
+    show_coordinates=True,
+    hide_x_ticks=False,
+    hide_y_ticks=False,
+    y_tick_right=False,
+):
     if show_coordinates:
         ax.axhline(y=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
         ax.axvline(x=0, color="#A9A9A9", linestyle="--", alpha=0.7, zorder=99)
-    if hide_ticks:
-        # ax.xaxis.set_visible(False)
+    if hide_x_ticks:
+        ax.xaxis.set_visible(False)
+    if hide_y_ticks:
         ax.yaxis.set_visible(False)
     if y_tick_right:
         ax.yaxis.set_label_position("right")
@@ -546,10 +553,13 @@ def plot_image_dataset(
         annotation_pos = (0.54, 0.94)
 
     for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
-        hide_ticks = (dataset_name == "fmnist") and (i > 0)
+        hide_y_ticks = (dataset_name == "fmnist") and (i > 0)
         y_tick_right = (dataset_name == "digits5") and (i > 0)
         _style_axes(
-            ax, show_coordinates=True, hide_ticks=hide_ticks, y_tick_right=y_tick_right
+            ax,
+            show_coordinates=True,
+            hide_y_ticks=hide_y_ticks,
+            y_tick_right=y_tick_right,
         )
 
         _scatter_image(ax, Z, zoom=zoom, fixed_indices=fixed_indices)
