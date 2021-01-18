@@ -106,7 +106,7 @@ def plot_with_us_map_bg(Z, names, out_name="cities_aligned.png"):
             bbox=bbox_style,
         )
 
-    fig.savefig(out_name, bbox_inches="tight", transparent=False)
+    fig.savefig(out_name, dpi=150, bbox_inches="tight", transparent=False)
 
 
 def plot_original_MDS(D, names, out_name="original.png"):
@@ -149,7 +149,7 @@ def plot_original_MDS(D, names, out_name="original.png"):
         y_offset = 0.03 if s in ["Washington DC", "Los Angeles", "New York"] else -0.03
         ax.text(x, y + y_offset, s, ha="center", va="center", color="blue", fontsize=14)
 
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 if __name__ == "__main__":

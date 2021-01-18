@@ -1,3 +1,4 @@
+# Run once with config
 # python run_pmds.py -d digits012 -m MAP3 --use_pre_config --normalize_dists
 # python run_pmds.py -d cities_us_toy -m MAP2 --use_pre_config --normalize_dists --no_logging
 
@@ -6,6 +7,8 @@
 # by default it will remake the plots using stored embedding files.
 # add `--exp_re_run` to re-run the exp.
 
+# Alignment of US cities
+# python plot_with_us_map.py
 
 # run experiment with missing pairs 20 times for 20 values of p
 # without --exp_re_run: only replot figures:

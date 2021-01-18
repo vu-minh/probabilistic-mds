@@ -18,7 +18,7 @@ import plotly.graph_objects as go
 def line(points, out_name="line.png"):
     fig, ax = plt.subplots(1, 1, figsize=(6, 3))
     ax.plot(points)
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 def plot_hist(D, out_name="hist.png"):
@@ -129,7 +129,7 @@ def compare_scatter(Z0, Z1, Z0_vars, Z1_vars, labels, titles, out_name="compare.
     scatter(Z0, Z0_vars, labels, titles[0], ax=ax0)
     scatter(Z1, Z1_vars, labels, titles[1], ax=ax1)
 
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 SVG_META_DATA = """<?xml version="1.0" encoding="utf-8" standalone="no"?>
@@ -250,7 +250,7 @@ def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
     df_summary = df_summary.reset_index()
     print(df_summary)
 
-    fig, ax = plt.subplots(1, 1, figsize=(5, 2.5))
+    fig, ax = plt.subplots(1, 1, figsize=(5, 2))
     # stylize_axes(ax)
 
     df_summary.plot(
@@ -267,20 +267,23 @@ def plot_score_with_missing_pairs(score_file_name, out_name="score.png"):
         ecolor="orange",
     )
 
-    ax.tick_params(axis="y", direction="out", pad=-37)
+    # ax.tick_params(axis="y", direction="out", pad=-37)
     ax.set_xlabel("Percent of missing pairs")
     ax.set_ylabel("Metric MDS stress")
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 def plot_Z_with_missing_pairs(
     embedding_dir, missing_percents, labels, out_name="all_Z.png"
 ):
     ncols = len(missing_percents) + 1
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=(3.5 * ncols, 3))
+    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=(3.5 * ncols, 3.25))
+    fig.subplots_adjust(wspace=0.15)
     in_names = ["original"] + missing_percents
 
+    markers = ["*", "s", "^", "o", "P"]
     for i, (ax, percent) in enumerate(zip(axes.ravel(), in_names)):
+        ax.tick_params(axis="both", labelsize=8)
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
 
@@ -292,9 +295,20 @@ def plot_Z_with_missing_pairs(
 
         Z, stress = joblib.load(f"{embedding_dir}/{percent}.z")
         ax.set_title(f"Stress = {stress:.2f}")
-        ax.scatter(*Z.T, c=labels, alpha=0.5, cmap="tab10")
+        for lbl in np.unique(labels):
+            ax.scatter(
+                *Z[labels == lbl].T, color=f"C{lbl}", marker=markers[lbl], alpha=0.5
+            )
+            ax.text(
+                *Z[labels == lbl].mean(axis=0),
+                s=f"{lbl}",
+                color=f"C{lbl}",
+                # transform=ax.transAxes,
+                fontsize=20,
+                bbox=dict(boxstyle="round", color="white", alpha=0.3),
+            )
 
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 def plot_scatter_with_fixed_points(
@@ -450,7 +464,7 @@ def plot_automobile_dataset(
     ax3 = fig.add_subplot(gs[1:, 8:])
     _plot_automobile_axes_names(ax3, marker_styles)
 
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
 
 
 def _style_axes(ax, show_coordinates=True, hide_ticks=False, y_tick_right=False):
@@ -563,4 +577,4 @@ def plot_image_dataset(
         img_pos = [-1.0, 1.0, -1.0, 1.0]
         ax2.imshow(axes_img, extent=img_pos)
 
-    fig.savefig(out_name, bbox_inches="tight")
+    fig.savefig(out_name, dpi=150, bbox_inches="tight")
