@@ -308,10 +308,104 @@ def plot_scatter_with_fixed_points(
         )
 
 
+def _plot_automobile_legend(ax):
+    from matplotlib.lines import Line2D
+    from matplotlib.legend_handler import HandlerLine2D, HandlerTuple
+
+    def _invisible(**style):
+        return Line2D(
+            [0], [0], c="w", markersize=12, markeredgecolor="#4863A0", **style
+        )
+
+    p3 = _invisible(
+        label="< 5 cylindes",
+        marker="o",
+        markerfacecoloralt="#D0D0D0",
+        fillstyle="left",
+    )
+    p4 = _invisible(
+        label="≥ 5 cylindes",
+        marker="^",
+        markerfacecoloralt="#D0D0D0",
+        fillstyle="left",
+    )
+
+    ax.axis("off")
+    lg1 = ax.legend(handles=[p3, p4], loc="center right", title="Number of cylindes")
+    ax.add_artist(lg1)
+
+    p11 = _invisible(label="Two doors", marker="o", markerfacecolor="white")
+    p12 = _invisible(label="Two doors", marker="^", markerfacecolor="white")
+
+    p21 = _invisible(label="Four doors", marker="o", markerfacecolor="#D0D0D0")
+    p22 = _invisible(label="Four doors", marker="^", markerfacecolor="#D0D0D0")
+
+    lg2 = ax.legend(
+        [(p11, p12), (p21, p22)],
+        ["Two doors", "Four doors"],
+        numpoints=1,
+        handler_map={tuple: HandlerTuple(ndivide=None, pad=0.8)},
+        loc="center left",
+        title="Number of doors",
+    )
+    ax.add_artist(lg2)
+
+
+def _plot_automobile_axes_names(ax, marker_styles):
+    _style_axes(ax, show_coordinates=False, hide_ticks=True)
+    ax.set_title("Interpretation of axes")
+    ax.text(0.0, 0.04, "(c)", transform=ax.transAxes, fontsize=18)
+    ax.set_xlim(-2, 2.25)
+    ax.set_ylim(-2, 2.25)
+
+    def _show_point(x, y, s, style):
+        ax.scatter(x, y, s=150, **style)
+        ax.text(x, y - 0.2, s, va="center", ha="center", fontsize=9)
+
+    _show_point(0.7, 1, "Big car:\n\n\n Four doors\n < 5 cylinders", marker_styles[2])
+    _show_point(
+        0.7, -0.8, "Big car:\n\n\n Four doors\n ≥ 5 cylinders", marker_styles[0]
+    )
+    _show_point(-1, 1, "Small car:\n\n\n Two doors\n < 5 cylinders", marker_styles[3])
+    _show_point(
+        -1, -0.8, "Small car:\n\n\n Two doors\n ≥ 5 cylinders", marker_styles[1]
+    )
+
+    ax.annotate(
+        "Car's Power",
+        xy=(-0.15, -1.75),
+        xycoords="data",
+        xytext=(-0.15, 1.85),
+        textcoords="data",
+        size=13,
+        va="center",
+        ha="center",
+        bbox=dict(boxstyle="round", fc="w"),
+        arrowprops=dict(arrowstyle="<|-", fc="w", lw=1),
+    )
+    ax.annotate(
+        "Car's\n Size",
+        xy=(-1.75, -0.1),
+        xycoords="data",
+        xytext=(1.8, -0.1),
+        textcoords="data",
+        size=13,
+        va="center",
+        ha="center",
+        bbox=dict(boxstyle="round", fc="w"),
+        arrowprops=dict(arrowstyle="<|-", fc="w", lw=1),
+    )
+
+
 def plot_automobile_dataset(
     Z0, Z1, fixed_points, labels, stresses, out_name="automobile.png"
 ):
-    fig, axes = plt.subplots(1, 2, figsize=(9, 4))
+    fig = plt.figure(figsize=(13, 4))
+    gs = fig.add_gridspec(4, 12, hspace=1.0)
+    # gs.update(hspace=0.1)
+    ax0 = fig.add_subplot(gs[:, 0:4])
+    ax1 = fig.add_subplot(gs[:, 4:8])
+
     # TODO make grid 4x4, 4x4, 1x3 legend and 3x3 axes meaning
     Z = np.concatenate((Z0, Z1), axis=0)
     xlims = 1.1 * np.percentile(Z[:, 0], [0, 100])
@@ -332,20 +426,25 @@ def plot_automobile_dataset(
         for lbl in np.unique(labels):
             ax.scatter(*Z[labels == lbl].T, s=128, **marker_styles[lbl])
 
-    for i, [ax, Z, stress] in enumerate(zip(axes.ravel(), [Z0, Z1], stresses)):
-        _style_axes(ax, show_coordinates=True, hide_ticks=False)
+    for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
+        _style_axes(ax, show_coordinates=True, hide_ticks=(i > 0))
         _scatter(ax, Z)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
-        ax.set_title(f"Stress: {stress:.2f}")
+        ax.text(0.58, 0.94, f"Stress:{stress:.2f}", transform=ax.transAxes, fontsize=14)
+        ax.text(0.03, 0.05, f"({chr(97 + i)})", transform=ax.transAxes, fontsize=18)
 
     fixed_indices, des_pos = list(zip(*fixed_points))
-    src_pos = Z0[fixed_indices, :]
-    des_pos = np.array(des_pos)
-    _show_moved_points(axes[0], src_pos, des_pos)
+    _show_moved_points(ax0, src_pos=Z0[fixed_indices, :], des_pos=np.array(des_pos))
 
     style_fixed_points = [marker_styles[labels[i]] for i in fixed_indices]
-    _show_fixed_points(axes[1], np.array(Z1)[list(fixed_indices)], style_fixed_points)
+    _show_fixed_points(ax1, np.array(Z1)[list(fixed_indices)], style_fixed_points)
+
+    ax2 = fig.add_subplot(gs[:1, 8:])
+    _plot_automobile_legend(ax2)
+
+    ax3 = fig.add_subplot(gs[1:, 8:])
+    _plot_automobile_axes_names(ax3, marker_styles)
 
     fig.savefig(out_name, bbox_inches="tight")
 
@@ -376,7 +475,9 @@ def _show_moved_points(ax, src_pos, des_pos, annote_src=True, annote_des=True):
 
 
 def _show_fixed_points(ax, points, styles):
-    for [x, y], style in zip(points, styles):
+    from copy import deepcopy
+
+    for [x, y], style in zip(points, deepcopy(styles)):
         style.update(dict(edgecolor="#800080", zorder=999))
         ax.scatter(x, y, s=128, **style)
         ax.scatter(x, y, s=64, color="#800080", marker="+", linewidths=3, zorder=1000)
