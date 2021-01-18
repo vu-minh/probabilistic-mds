@@ -354,6 +354,10 @@ def _plot_automobile_legend(ax):
 def _plot_automobile_axes_names(ax, marker_styles):
     _style_axes(ax, show_coordinates=False, hide_ticks=True)
     ax.set_title("Interpretation of axes")
+    for spine in ax.spines.values():
+        spine.set_linestyle("-.")
+        spine.set_alpha(0.5)
+
     ax.text(0.0, 0.04, "(c)", transform=ax.transAxes, fontsize=18)
     ax.set_xlim(-2, 2.25)
     ax.set_ylim(-2, 2.25)
@@ -460,7 +464,7 @@ def _style_axes(ax, show_coordinates=True, hide_ticks=False):
 
 def _show_moved_points(ax, src_pos, des_pos, annote_src=True, annote_des=True):
     # show arrow from src to des
-    arrowprops = dict(arrowstyle="<-", linestyle="--")
+    arrowprops = dict(arrowstyle="<-", linestyle="--", alpha=0.5)
     for src, des in zip(src_pos, des_pos):
         ax.annotate(text="", xy=src, xytext=des, arrowprops=arrowprops, zorder=998)
 
@@ -488,7 +492,7 @@ def plot_image_dataset(
 ):
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    fig = plt.figure(figsize=(13, 4.5))
+    fig = plt.figure(figsize=(11.5, 4))
     gs = fig.add_gridspec(1, 13)
     ax0 = fig.add_subplot(gs[0, 0:5])
     ax1 = fig.add_subplot(gs[0, 5:10])
@@ -501,7 +505,7 @@ def plot_image_dataset(
     img_size = int(math.sqrt(X.shape[1]))
     X = X.reshape(-1, img_size, img_size)
 
-    def _scatter_image(ax, Z, zoom=0.375, cmap="binary", fixed_indices=[]):
+    def _scatter_image(ax, Z, zoom=0.3, cmap="binary", fixed_indices=[]):
         def _add_artist(img, pos, **style):
             ab = AnnotationBbox(OffsetImage(img, zoom=zoom, cmap=cmap), pos, **style)
             ax.add_artist(ab)
@@ -517,26 +521,32 @@ def plot_image_dataset(
             _add_artist(X[i], Z[i], **highlighted)
 
     fixed_indices, des_pos = list(zip(*fixed_points))
+    if dataset_name == "fmnist":
+        zoom = 0.3
+        annotation_pos = (0.02, 0.94)
+    else:
+        zoom = 0.75
+        annotation_pos = (0.54, 0.94)
 
     for i, [ax, Z, stress] in enumerate(zip([ax0, ax1], [Z0, Z1], stresses)):
         _style_axes(ax, show_coordinates=True, hide_ticks=(i > 0))
-        _scatter_image(ax, Z, fixed_indices=fixed_indices)
+        _scatter_image(ax, Z, zoom=zoom, fixed_indices=fixed_indices)
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
         ax.text(
-            0.02, 0.94, f"Stress: {stress:.2f}", transform=ax.transAxes, fontsize=16
+            *annotation_pos, f"Stress:{stress:.2f}", transform=ax.transAxes, fontsize=14
         )
         if dataset_name == "fmnist":
             ax_idx = chr(ord("a") + i)
-            ax.text(0.02, 0.02, f"({ax_idx})", transform=ax.transAxes, fontsize=22)
+            ax.text(0.02, 0.05, f"({ax_idx})", transform=ax.transAxes, fontsize=20)
 
     _show_moved_points(ax0, Z0[fixed_indices, :], np.array(des_pos), annote_src=False)
 
     if dataset_name == "fmnist":
         ax2 = fig.add_subplot(gs[0, 10:])
         ax2.axis("off")
-        ax2.set_title("Interpretation of axes", fontsize=16)
-        ax2.text(x=0.03, y=0.05, s="(c)", transform=ax2.transAxes, fontsize=22)
+        ax2.set_title("Interpretation of axes", fontsize=14)
+        ax2.text(x=0.03, y=0.05, s="(c)", transform=ax2.transAxes, fontsize=20)
         axes_img = plt.imread(f"./plots/MAP2/fmnist/axes.png")
         img_pos = [-1.0, 1.0, -1.0, 1.0]
         ax2.imshow(axes_img, extent=img_pos)
