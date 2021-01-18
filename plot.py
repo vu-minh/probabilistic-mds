@@ -488,7 +488,7 @@ def plot_image_dataset(
 ):
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    fig = plt.figure(figsize=(13, 5))
+    fig = plt.figure(figsize=(13, 4.5))
     gs = fig.add_gridspec(1, 13)
     ax0 = fig.add_subplot(gs[0, 0:5])
     ax1 = fig.add_subplot(gs[0, 5:10])
