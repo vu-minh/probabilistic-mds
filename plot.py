@@ -488,7 +488,7 @@ def plot_image_dataset(
 ):
     from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 
-    fig = plt.figure(figsize=(14.5, 6))
+    fig = plt.figure(figsize=(13, 5))
     gs = fig.add_gridspec(1, 13)
     ax0 = fig.add_subplot(gs[0, 0:5])
     ax1 = fig.add_subplot(gs[0, 5:10])
@@ -524,19 +524,19 @@ def plot_image_dataset(
         ax.set_xlim(xlims)
         ax.set_ylim(ylims)
         ax.text(
-            0.02, 0.95, f"Stress: {stress:.2f}", transform=ax.transAxes, fontsize=18
+            0.02, 0.94, f"Stress: {stress:.2f}", transform=ax.transAxes, fontsize=16
         )
         if dataset_name == "fmnist":
             ax_idx = chr(ord("a") + i)
-            ax.text(0.05, 0.05, f"({ax_idx})", transform=ax.transAxes, fontsize=24)
+            ax.text(0.02, 0.02, f"({ax_idx})", transform=ax.transAxes, fontsize=22)
 
     _show_moved_points(ax0, Z0[fixed_indices, :], np.array(des_pos), annote_src=False)
 
     if dataset_name == "fmnist":
         ax2 = fig.add_subplot(gs[0, 10:])
         ax2.axis("off")
-        ax2.set_title("Interpretation of axes", fontsize=18)
-        ax2.text(x=0.05, y=0.05, s="(c)", transform=ax2.transAxes, fontsize=24)
+        ax2.set_title("Interpretation of axes", fontsize=16)
+        ax2.text(x=0.03, y=0.05, s="(c)", transform=ax2.transAxes, fontsize=22)
         axes_img = plt.imread(f"./plots/MAP2/fmnist/axes.png")
         img_pos = [-1.0, 1.0, -1.0, 1.0]
         ax2.imshow(axes_img, extent=img_pos)
