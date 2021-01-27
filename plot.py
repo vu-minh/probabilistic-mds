@@ -332,20 +332,20 @@ def _plot_automobile_legend(ax):
         )
 
     p3 = _invisible(
-        label="< 5 cylindes",
+        label="< 5 cylinders",
         marker="o",
         markerfacecoloralt="#D0D0D0",
         fillstyle="left",
     )
     p4 = _invisible(
-        label="≥ 5 cylindes",
+        label="≥ 5 cylinders",
         marker="^",
         markerfacecoloralt="#D0D0D0",
         fillstyle="left",
     )
 
     ax.axis("off")
-    lg1 = ax.legend(handles=[p3, p4], loc="center right", title="Number of cylindes")
+    lg1 = ax.legend(handles=[p3, p4], loc="center right", title="Number of cylinders")
     ax.add_artist(lg1)
 
     p11 = _invisible(label="Two doors", marker="o", markerfacecolor="white")
